@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"emberdb/internal/db"
+	"emberdb/internal/parser"
 	"fmt"
 	"net"
 	"strings"
@@ -14,19 +14,8 @@ func handleConnection(conn net.Conn) {
 	for scanner.Scan() {
 		message := scanner.Text()
 		msgArr := strings.Split(message, " ")
-		op := msgArr[0]
-
-		if op == "SET" {
-			db.SetValue(msgArr[1], msgArr[2])
-			conn.Write([]byte("SET OK\n"))
-		} else if op == "GET" && len(msgArr) == 2 {
-			value := db.GetValue(msgArr[1])
-			conn.Write([]byte(value.(string) + "\n"))
-		} else if op == "DEL" && len(msgArr) == 2 {
-			value := db.DeleteKey(msgArr[1])
-			conn.Write([]byte(value + "\n"))
-		}
-
+		output, _ := parser.ParseAndExecute(msgArr)
+		conn.Write([]byte(output + "\n"))
 	}
 }
 

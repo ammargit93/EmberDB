@@ -14,6 +14,17 @@ var (
 	mu    sync.Mutex
 )
 
+func UpdateValue(key string, value string) bool {
+	mu.Lock()
+	defer mu.Unlock()
+	_, exists := store.text[key]
+	if exists {
+		store.text[key] = value
+		return true
+	}
+	return false
+}
+
 func SetValue(key string, value string) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -37,14 +48,14 @@ func GetValue(key string) any {
 
 }
 
-func DeleteKey(key string) string {
+func DeleteKey(key string) bool {
 	mu.Lock()
 	defer mu.Unlock()
 	for k, _ := range store.text {
 		if k == key {
 			delete(store.text, key)
-			return "Key Deleted Successfully"
+			return true
 		}
 	}
-	return "Key could not be deleted"
+	return false
 }
