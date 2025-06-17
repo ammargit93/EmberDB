@@ -1,6 +1,9 @@
 package parser
 
-import "emberdb/internal/db"
+import (
+	"emberdb/internal/db"
+	"strings"
+)
 
 var (
 	commandParser = map[string]CommandFunc{
@@ -8,16 +11,37 @@ var (
 		"GET":    handleGet,
 		"DEL":    handleDelete,
 		"UPDATE": handleUpdate,
+		"GETALL": getAllPairs,
 	}
 )
 
 type CommandFunc func(args []string) string
 
+func getAllPairs(args []string) string {
+	data := db.GetAllData()
+	// s := strings.Replace(data, "\\", "\n", len(data))
+	return data
+}
+
 func handleSet(args []string) string {
 	key := args[0]
-	value := args[1]
-	db.SetValue(key, value)
-	return "SET OK"
+	if len(args) > 2 {
+		value := strings.Join(args[1:], " ")
+		if db.SetValue(key, value) {
+			return "Key already exists"
+		} else {
+			return "SET OK"
+		}
+	} else {
+		value := args[1]
+		if db.SetValue(key, value) {
+			return "Key already exists"
+		} else {
+			return "SET OK"
+		}
+	}
+
+	// return "SET OK"
 }
 
 func handleGet(args []string) string {
@@ -49,7 +73,12 @@ func handleUpdate(args []string) string {
 
 func ParseAndExecute(messageArray []string) (string, bool) {
 	Command := messageArray[0]
-	args := messageArray[1:]
+	var args []string
+	if len(messageArray) > 1 {
+		args = messageArray[1:]
+	} else {
+		args = []string{}
+	}
 	if handler, ok := commandParser[Command]; ok {
 		output := handler(args)
 		return output, ok

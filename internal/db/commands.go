@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -14,6 +13,17 @@ var (
 	mu    sync.Mutex
 )
 
+func GetAllData() string {
+	mu.Lock()
+	defer mu.Unlock()
+	allPairs := ""
+	for k, v := range store.text {
+		allPairs += k + " : " + v.(string) + "\\"
+	}
+	// fmt.Println(allPairs)
+	return allPairs
+}
+
 func UpdateValue(key string, value string) bool {
 	mu.Lock()
 	defer mu.Unlock()
@@ -25,15 +35,17 @@ func UpdateValue(key string, value string) bool {
 	return false
 }
 
-func SetValue(key string, value string) {
+func SetValue(key string, value string) bool {
 	mu.Lock()
 	defer mu.Unlock()
 	_, exists := store.text[key].(string)
 	if exists {
-		fmt.Println("Key already exists")
-		return
+		return true
+	} else {
+		store.text[key] = value
+		return false
 	}
-	store.text[key] = value
+
 }
 
 func GetValue(key string) any {

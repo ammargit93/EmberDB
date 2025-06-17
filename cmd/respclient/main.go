@@ -16,6 +16,7 @@ func connect(command string) {
 	conn.Write([]byte(command + "\n"))
 
 	response, err := bufio.NewReader(conn).ReadString('\n')
+
 	if err != nil {
 		fmt.Println("Connection Error: ", err)
 		return
@@ -30,6 +31,7 @@ func main() {
 		fmt.Print("ember> ")
 		line, _ := reader.ReadString(byte('\n'))
 		if line == "quit" || line == "q" {
+			os.Exit(1)
 			break
 		}
 		connect(line)
