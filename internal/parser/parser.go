@@ -1,87 +1,104 @@
+// internal/parser/parser.go
 package parser
 
 import (
 	"emberdb/internal/db"
+	"fmt"
 	"strings"
 )
 
 var (
 	commandParser = map[string]CommandFunc{
-		"SET":    handleSet,
-		"GET":    handleGet,
-		"DEL":    handleDelete,
-		"UPDATE": handleUpdate,
-		"GETALL": getAllPairs,
+		"SET":     handleSet,
+		"GET":     handleGet,
+		"DEL":     handleDelete,
+		"UPDATE":  handleUpdate,
+		"GETALL":  getAllPairs,
+		"SETFILE": setFile,
+		"GETFILE": getFile,
 	}
 )
 
 type CommandFunc func(args []string) string
 
+func getFile(args []string) string {
+	if len(args) < 1 {
+		return "Missing key for GETFILE"
+	}
+	b, err := db.GetFile(args[0])
+	if err != nil {
+		return "Error getting file: " + err.Error()
+	}
+	return b
+}
+
+func setFile(args []string) string {
+	if len(args) < 2 {
+		return "Missing arguments for SETFILE"
+	}
+	if err, ok := db.SetFile(args[0], args[1]); err != nil || !ok {
+		return "Error setting the file"
+	}
+	return "File successfully set"
+}
+
 func getAllPairs(args []string) string {
-	data := db.GetAllData()
-	// s := strings.Replace(data, "\\", "\n", len(data))
-	return data
+	return db.GetAllData()
 }
 
 func handleSet(args []string) string {
-	key := args[0]
-	if len(args) > 2 {
-		value := strings.Join(args[1:], " ")
-		if db.SetValue(key, value) {
-			return "Key already exists"
-		} else {
-			return "SET OK"
-		}
-	} else {
-		value := args[1]
-		if db.SetValue(key, value) {
-			return "Key already exists"
-		} else {
-			return "SET OK"
-		}
+	if len(args) < 2 {
+		return "Missing key or value for SET"
 	}
-
-	// return "SET OK"
+	key := args[0]
+	value := strings.Join(args[1:], " ")
+	if db.SetValue(key, value) {
+		return "Key already exists"
+	}
+	return "SET OK"
 }
 
 func handleGet(args []string) string {
-	key := args[0]
-	value := db.GetValue(key).(string)
-	return value
+	if len(args) < 1 {
+		return "Missing key for GET"
+	}
+	val := db.GetValue(args[0])
+	if str, ok := val.(string); ok {
+		return str
+	} else if b, ok := val.([]byte); ok {
+		return string(b)
+	}
+	return fmt.Sprint(val)
 }
 
 func handleDelete(args []string) string {
-	key := args[0]
-	isDeleted := db.DeleteKey(key)
-	if isDeleted {
-		return "Key Deleted Successfully"
-	} else {
-		return "Key could not be deleted"
+	if len(args) < 1 {
+		return "Missing key for DEL"
 	}
+	if db.DeleteKey(args[0]) {
+		return "Key Deleted Successfully"
+	}
+	return "Key could not be deleted"
 }
 
 func handleUpdate(args []string) string {
-	key := args[0]
-	value := args[1]
-	isUpdated := db.UpdateValue(key, value)
-	if isUpdated {
-		return "Key Updated Successfully"
-	} else {
-		return "Key could not be updated"
+	if len(args) < 2 {
+		return "Missing key or value for UPDATE"
 	}
+	if db.UpdateValue(args[0], args[1]) {
+		return "Key Updated Successfully"
+	}
+	return "Key could not be updated"
 }
 
 func ParseAndExecute(messageArray []string) (string, bool) {
-	Command := messageArray[0]
-	var args []string
-	if len(messageArray) > 1 {
-		args = messageArray[1:]
-	} else {
-		args = []string{}
+	if len(messageArray) == 0 {
+		return "Invalid command", false
 	}
-	if handler, ok := commandParser[Command]; ok {
-		output := handler(args)
-		return output, ok
+	command := strings.ToUpper(messageArray[0])
+	args := messageArray[1:]
+	if handler, ok := commandParser[command]; ok {
+		return handler(args), true
 	}
-	return "", false
+	return "Unknown command", false
 }

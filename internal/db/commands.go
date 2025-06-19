@@ -1,6 +1,8 @@
 package db
 
 import (
+	"fmt"
+	"os"
 	"sync"
 )
 
@@ -13,12 +15,35 @@ var (
 	mu    sync.Mutex
 )
 
+func GetFile(key string) (string, error) {
+	mu.Lock()
+	defer mu.Unlock()
+	var buf []byte
+	buf = store.text[key].([]byte)
+	return string(buf), nil
+}
+
+func SetFile(key string, value string) (error, bool) {
+	filePath := value
+	//
+	fmt.Println(filePath)
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Println("Error Opening the file", err)
+		return err, false
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	store.text[key] = data
+	return nil, true
+}
+
 func GetAllData() string {
 	mu.Lock()
 	defer mu.Unlock()
 	allPairs := ""
 	for k, v := range store.text {
-		allPairs += k + " : " + v.(string) + "\\"
+		allPairs += k + " : " + v.(string) + "\n"
 	}
 	// fmt.Println(allPairs)
 	return allPairs

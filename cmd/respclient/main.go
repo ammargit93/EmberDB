@@ -5,33 +5,44 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func connect(command string) {
-	conn, err := net.Dial("tcp", ":8080")
+	port := os.Args[1]
+	conn, err := net.Dial("tcp", port)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Connection failed:", err)
 		os.Exit(1)
 	}
-	conn.Write([]byte(command + "\n"))
+	defer conn.Close()
 
-	response, err := bufio.NewReader(conn).ReadString('\n')
-
+	_, err = conn.Write([]byte(command + "\n"))
 	if err != nil {
-		fmt.Println("Connection Error: ", err)
+		fmt.Println("Error sending command:", err)
 		return
 	}
-	fmt.Print(response)
-	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		if strings.TrimSpace(line) == "<END>" {
+			break
+		}
+		fmt.Print(line)
+	}
 }
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Print("ember> ")
-		line, _ := reader.ReadString(byte('\n'))
+		line, _ := reader.ReadString('\n')
+		line = strings.TrimSpace(line)
 		if line == "quit" || line == "q" {
-			os.Exit(1)
 			break
 		}
 		connect(line)
