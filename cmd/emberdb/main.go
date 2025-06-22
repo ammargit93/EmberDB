@@ -2,56 +2,75 @@ package main
 
 import (
 	"bufio"
+	"emberdb/internal/api"
+	"emberdb/internal/db"
 	"emberdb/internal/parser"
+	"emberdb/internal/state"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
-	"sync"
 )
 
-var (
-	mu       sync.Mutex
-	NodeAddr string
-	AllPeers []string
-	Leader   string
-)
+// var (
+// 	mu       sync.Mutex
+// 	NodeAddr string
+// 	AllPeers []string
+// 	Leader   string
+// )
 
-type registerResponse struct {
-	NodeAddr  string   `json:"node_addr"`
-	NodeArray []string `json:"node_array"`
-	Leader    string   `json:"leader"`
+type followerToLeader struct {
+	Data   db.Store `json:"data"`
+	Sender string   `json:"sender"`
 }
 
-func RegisterNode(port string) error {
-	req, err := http.NewRequest("GET", "http://localhost:5050/register", nil)
+func splitIPandIncrementPort(addr string) string {
+	parts := strings.Split(addr, ":")
+	if len(parts) < 3 {
+		return "http://localhost:6060"
+	}
+	host := parts[1]    // "//localhost"
+	portStr := parts[2] // "9090"
+	portInt, err := strconv.Atoi(portStr)
+	if err != nil {
+		return "http://localhost:6060"
+	}
+	newPort := portInt + 1
+	host = strings.TrimPrefix(host, "//")
+	return fmt.Sprintf("http://%s:%d", host, newPort)
+}
+
+func sendRequestToLeader(data db.Store) error {
+	if state.Leader == state.NodeAddr {
+		return fmt.Errorf("this node is the leader; no need to forward")
+	}
+	payload := followerToLeader{
+		Data:   data,
+		Sender: state.NodeAddr,
+	}
+	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("X-Port", port)
+	ip := splitIPandIncrementPort(state.Leader)
+	resp, err := http.Post(ip+"/replicate", "application/json", strings.NewReader(string(jsonPayload)))
+	if err != nil {
+		fmt.Println("Response Error is ", err)
+	}
+	bdy, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error is ", err)
+	}
+	fmt.Println(string(bdy) + "Done forwarding!")
 
-	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-
-	var response registerResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return fmt.Errorf("failed to decode response: %v", err)
-	}
-
-	fmt.Println("Leader:", response.Leader)
-	fmt.Println("Node address:", response.NodeAddr)
-	fmt.Println("Node addresses:", response.NodeArray)
-	mu.Lock()
-	NodeAddr = response.NodeAddr
-	AllPeers = response.NodeArray
-	Leader = response.NodeArray[0]
-	mu.Unlock()
-
 	return nil
 }
 
@@ -63,24 +82,39 @@ func handleConnection(conn net.Conn) {
 		msgArr := strings.Split(message, " ")
 		output, _ := parser.ParseAndExecute(msgArr)
 		conn.Write([]byte(output + "\n<END>\n"))
+		sendRequestToLeader(db.StoreStructure)
 	}
+}
+func IncrementPort(portStr string) string {
+	portNum := strings.TrimPrefix(portStr, ":")
+	portInt, err := strconv.Atoi(portNum)
+	if err != nil {
+		return ":6060"
+	}
+
+	return fmt.Sprintf(":%d", portInt+1)
 }
 
 func main() {
-	port := os.Args[1]
-	l, err := net.Listen("tcp", port)
+	Port := os.Args[1]
+	l, err := net.Listen("tcp", Port)
 
 	if err != nil {
 		fmt.Println(err)
 		panic("Error!!!!")
 	}
-	fmt.Println("Server running at " + port)
-	_ = RegisterNode(port)
-	mu.Lock()
-	defer mu.Unlock()
-	fmt.Println(NodeAddr)
-	fmt.Println(AllPeers)
-	fmt.Println(Leader)
+	fmt.Println("Server running at " + Port)
+
+	_ = RegisterNode(Port)
+	state.Mu.Lock()
+	defer state.Mu.Unlock()
+
+	fmt.Println("Leader:", state.Leader)
+	fmt.Println("Node address:", state.NodeAddr)
+	fmt.Println("Node addresses:", state.AllPeers)
+	port := IncrementPort(Port)
+	go api.StartHTTPServer(port)
+
 	for {
 		conn, err := l.Accept()
 		if err != nil {

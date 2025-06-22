@@ -70,27 +70,5 @@ func main() {
 		})
 	})
 
-	http.HandleFunc("/find_leader", func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		defer mu.Unlock()
-
-		response := map[string]interface{}{
-			"leader": "",
-			"error":  nil,
-		}
-
-		status := http.StatusOK
-		if len(NodeStore) == 0 {
-			status = http.StatusNotFound
-			response["error"] = "no leader available"
-		} else {
-			response["leader"] = NodeStore[0]
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(status)
-		json.NewEncoder(w).Encode(response)
-	})
-
 	http.ListenAndServe(":5050", nil)
 }
