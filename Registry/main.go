@@ -35,40 +35,64 @@ type registerResponse struct {
 	Leader    string   `json:"leader"`
 }
 
-func main() {
-	fmt.Println("Registry server started on :5050")
-	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
-		clientIP := getClientAddress(r)
-		port := r.Header.Get("X-Port")
-		if port == "" {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"error": "X-Port header is required"})
+func Register(w http.ResponseWriter, r *http.Request) {
+	clientIP := getClientAddress(r)
+	port := r.Header.Get("X-Port")
+	if port == "" {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"error": "X-Port header is required"})
+		return
+	}
+
+	nodeAddr := fmt.Sprintf("http://%s%s", clientIP, port)
+
+	mu.Lock()
+	for i := 0; i < len(NodeStore); i++ {
+		if nodeAddr == NodeStore[i] {
+			fmt.Println("Address already included")
 			return
 		}
+	}
+	NodeStore = append(NodeStore, nodeAddr)
+	leader := NodeStore[0]
 
-		nodeAddr := fmt.Sprintf("http://%s%s", clientIP, port)
+	a := NodeStore
+	mu.Unlock()
 
-		mu.Lock()
-		for i := 0; i < len(NodeStore); i++ {
-			if nodeAddr == NodeStore[i] {
-				fmt.Println("Address already included")
-				return
-			}
-		}
-		NodeStore = append(NodeStore, nodeAddr)
-		leader := NodeStore[0]
-
-		a := NodeStore
-		mu.Unlock()
-
-		fmt.Printf("Registered node: %s\n", nodeAddr)
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(registerResponse{
-			NodeAddr:  nodeAddr,
-			NodeArray: a,
-			Leader:    leader,
-		})
+	fmt.Printf("Registered node: %s\n", nodeAddr)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(registerResponse{
+		NodeAddr:  nodeAddr,
+		NodeArray: a,
+		Leader:    leader,
 	})
+}
 
+func findAllPeers(w http.ResponseWriter, r *http.Request) {
+	clientIP := getClientAddress(r)
+	port := r.Header.Get("X-Port")
+	nodeAddr := fmt.Sprintf("http://%s%s", clientIP, port)
+	mu.Lock()
+	for i := 0; i < len(NodeStore); i++ {
+		if nodeAddr == NodeStore[i] {
+			fmt.Println("Address already included")
+			return
+		}
+	}
+	leader := NodeStore[0]
+	a := NodeStore
+	mu.Unlock()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(registerResponse{
+		NodeAddr:  nodeAddr,
+		NodeArray: a,
+		Leader:    leader,
+	})
+}
+
+func main() {
+	fmt.Println("Registry server started on :5050")
+	http.HandleFunc("/register", Register)
+	http.HandleFunc("/find_peers", findAllPeers)
 	http.ListenAndServe(":5050", nil)
 }

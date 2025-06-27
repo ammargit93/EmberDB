@@ -56,6 +56,15 @@ func sendRequestToLeader(data db.Store) error {
 	if err != nil {
 		return err
 	}
+	peerResp, err := http.Get("http://localhost:5050/find_peers")
+	if err != nil {
+		fmt.Println("Error is peerResp", err)
+	}
+	peerbdy, err := io.ReadAll(peerResp.Body)
+	if err != nil {
+		fmt.Println("Error is ", err)
+	}
+	fmt.Println(string(peerbdy) + "Done finding peers!")
 	ip := splitIPandIncrementPort(state.Leader)
 	resp, err := http.Post(ip+"/replicate", "application/json", strings.NewReader(string(jsonPayload)))
 	if err != nil {
@@ -70,6 +79,7 @@ func sendRequestToLeader(data db.Store) error {
 	if err != nil {
 		return err
 	}
+	defer peerResp.Body.Close()
 	defer resp.Body.Close()
 	return nil
 }
