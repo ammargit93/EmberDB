@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -13,6 +12,12 @@ var (
 	NodeStore = []string{}
 	mu        sync.Mutex
 )
+
+type registerResponse struct {
+	NodeAddr  string   `json:"nodeaddr"`
+	NodeArray []string `json:"nodearray"`
+	Leader    string   `json:"leader"`
+}
 
 func getClientAddress(r *http.Request) string {
 	ip := r.RemoteAddr
@@ -29,70 +34,10 @@ func getClientAddress(r *http.Request) string {
 	return host
 }
 
-type registerResponse struct {
-	NodeAddr  string   `json:"node_addr"`
-	NodeArray []string `json:"node_array"`
-	Leader    string   `json:"leader"`
-}
-
-func Register(w http.ResponseWriter, r *http.Request) {
-	clientIP := getClientAddress(r)
-	port := r.Header.Get("X-Port")
-	if port == "" {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"error": "X-Port header is required"})
-		return
-	}
-
-	nodeAddr := fmt.Sprintf("http://%s%s", clientIP, port)
-
-	mu.Lock()
-	for i := 0; i < len(NodeStore); i++ {
-		if nodeAddr == NodeStore[i] {
-			fmt.Println("Address already included")
-			return
-		}
-	}
-	NodeStore = append(NodeStore, nodeAddr)
-	leader := NodeStore[0]
-
-	a := NodeStore
-	mu.Unlock()
-
-	fmt.Printf("Registered node: %s\n", nodeAddr)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(registerResponse{
-		NodeAddr:  nodeAddr,
-		NodeArray: a,
-		Leader:    leader,
-	})
-}
-
-func findAllPeers(w http.ResponseWriter, r *http.Request) {
-	clientIP := getClientAddress(r)
-	port := r.Header.Get("X-Port")
-	nodeAddr := fmt.Sprintf("http://%s%s", clientIP, port)
-	mu.Lock()
-	for i := 0; i < len(NodeStore); i++ {
-		if nodeAddr == NodeStore[i] {
-			fmt.Println("Address already included")
-			return
-		}
-	}
-	leader := NodeStore[0]
-	a := NodeStore
-	mu.Unlock()
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(registerResponse{
-		NodeAddr:  nodeAddr,
-		NodeArray: a,
-		Leader:    leader,
-	})
-}
-
 func main() {
+	InitDB()
 	fmt.Println("Registry server started on :5050")
 	http.HandleFunc("/register", Register)
-	http.HandleFunc("/find_peers", findAllPeers)
+	http.HandleFunc("/find_peers", FindAllPeers)
 	http.ListenAndServe(":5050", nil)
 }

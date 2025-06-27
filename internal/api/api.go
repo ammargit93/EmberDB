@@ -2,7 +2,6 @@ package api
 
 import (
 	"emberdb/internal/db"
-	"emberdb/internal/state"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,10 +10,6 @@ import (
 type followerResponse struct {
 	Data   db.Store `json:"data"`
 	Sender string   `json:"sender"`
-}
-
-type Data struct {
-	DataMap db.Store `json:"store"`
 }
 
 func StartHTTPServer(port string) {
@@ -27,22 +22,18 @@ func StartHTTPServer(port string) {
 			fmt.Println("JSON decode error:", err)
 			return
 		}
-		db.StoreStructure = fr.Data
-		for i := 0; i < len(state.AllPeers); i++ {
-			w.Header().Set("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(&db.StoreStructure)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-		}
-		// w.Header().Set("Content-Type", "application/json")
-		// err := json.NewEncoder(w).Encode(&data)
-		// if err != nil {
-		// 	fmt.Println(err)
-		// 	return
-		// }
 
+		db.StoreStructure = fr.Data
+		fmt.Println("Replication request received from:", fr.Sender)
+		fmt.Println("Updated store:", db.StoreStructure)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"status": "replicated"})
 	})
-	http.ListenAndServe(port, nil)
+
+	err := http.ListenAndServe(port, nil)
+	if err != nil {
+		fmt.Println("Failed to start HTTP server:", err)
+	}
 }

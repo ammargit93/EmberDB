@@ -4,37 +4,44 @@ import (
 	"emberdb/internal/state"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 )
 
 type registerResponse struct {
-	NodeAddr  string   `json:"node_addr"`
-	NodeArray []string `json:"node_array"`
+	NodeAddr  string   `json:"nodeaddr"`
+	NodeArray []string `json:"nodearray"`
 	Leader    string   `json:"leader"`
 }
 
 func RegisterNode(port string) error {
-	req, err := http.NewRequest("GET", "http://localhost:5050/register", nil)
-	if err != nil {
-		return err
-	}
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", "http://localhost:5050/register", nil)
 	req.Header.Set("X-Port", port)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
+		fmt.Println("Request error:", err)
 		return err
 	}
 	defer resp.Body.Close()
 
-	var response registerResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return fmt.Errorf("failed to decode response: %v", err)
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Println("Registry server error:", string(body))
+		return fmt.Errorf("register failed with status: %d", resp.StatusCode)
+	}
+
+	var regResp registerResponse
+	if err := json.NewDecoder(resp.Body).Decode(&regResp); err != nil {
+		fmt.Println("Error decoding JSON:", err)
+		return err
 	}
 
 	state.Mu.Lock()
-	state.NodeAddr = response.NodeAddr
-	state.AllPeers = response.NodeArray
-	state.Leader = response.NodeArray[0]
+	state.NodeAddr = regResp.NodeAddr
+	state.AllPeers = regResp.NodeArray
+	state.Leader = regResp.Leader
 	state.Mu.Unlock()
 
 	return nil
