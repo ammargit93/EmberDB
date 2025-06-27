@@ -5,12 +5,12 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
+	// "sync"
 )
 
 var (
 	NodeStore = []string{}
-	mu        sync.Mutex
+	// mu        sync.Mutex
 )
 
 type registerResponse struct {
