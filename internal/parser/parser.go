@@ -16,10 +16,19 @@ var (
 		"GETALL":  getAllPairs,
 		"SETFILE": setFile,
 		"GETFILE": getFile,
+		"SAVE":    saveFile,
 	}
 )
 
 type CommandFunc func(args []string) string
+
+func saveFile(args []string) string {
+	if len(args) < 1 {
+		return "Missing key for SAVE"
+	}
+	db.SaveFile(args[0], args[1])
+	return "Saved to " + args[1]
+}
 
 func getFile(args []string) string {
 	if len(args) < 1 {
@@ -37,7 +46,7 @@ func setFile(args []string) string {
 		return "Missing arguments for SETFILE"
 	}
 	if err, ok := db.SetFile(args[0], args[1]); err != nil || !ok {
-		return "Error setting the file"
+		return "Error setting the file" + err.Error()
 	}
 	return "File successfully set"
 }

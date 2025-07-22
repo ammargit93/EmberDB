@@ -2,7 +2,10 @@ package db
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -14,6 +17,33 @@ var (
 	StoreStructure = Store{Text: make(map[string]any)}
 	mu             sync.Mutex
 )
+
+func SaveFile(key string, path string) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		dir := filepath.Dir(path)
+
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			log.Println("Error creating directory:", err)
+			return
+		}
+
+		// Get file name from key
+		fileName, _ := GetFile(key)
+		fileArr := strings.Split(fileName, "\\")
+		fileName = fileArr[len(fileArr)-1]
+		log.Println("Saving file:", fileName)
+
+		f, err := os.Create(path)
+		if err != nil {
+			log.Println("Error creating file:", err)
+			return
+		}
+		if _, err := f.Write([]byte(fileName)); err != nil {
+			log.Fatalln(err)
+		}
+		defer f.Close()
+	}
+}
 
 func GetFile(key string) (string, error) {
 	mu.Lock()

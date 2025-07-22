@@ -109,7 +109,6 @@ func handleConnection(conn net.Conn) {
 			if state.NodeAddr == state.Leader {
 				sendRequestToFollowers(db.StoreStructure)
 				fmt.Println("Starting replication from leader:", state.NodeAddr)
-
 			} else {
 				fmt.Println("Not the leader, skipping replication.")
 			}
