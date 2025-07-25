@@ -3,9 +3,9 @@ package db
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 )
 
@@ -18,31 +18,53 @@ var (
 	mu             sync.Mutex
 )
 
-func SaveFile(key string, path string) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		dir := filepath.Dir(path)
-
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			log.Println("Error creating directory:", err)
-			return
-		}
-
-		// Get file name from key
-		fileName, _ := GetFile(key)
-		fileArr := strings.Split(fileName, "\\")
-		fileName = fileArr[len(fileArr)-1]
-		log.Println("Saving file:", fileName)
-
-		f, err := os.Create(path)
-		if err != nil {
-			log.Println("Error creating file:", err)
-			return
-		}
-		if _, err := f.Write([]byte(fileName)); err != nil {
-			log.Fatalln(err)
-		}
-		defer f.Close()
+func SaveFile(key string, path string) error {
+	// Step 1: Get file content from memory (via GetFile)
+	fileContentStr, err := GetFile(key)
+	if err != nil {
+		return fmt.Errorf("error getting file from cache: %w", err)
 	}
+
+	// Convert string to byte slice
+	fileContent := []byte(fileContentStr)
+	mimeType := http.DetectContentType(fileContent)
+	var ext string
+	switch mimeType {
+	case "application/pdf":
+		ext = ".pdf"
+	case "image/jpeg":
+		ext = ".jpg"
+	case "image/png":
+		ext = ".png"
+	case "video/mp4":
+		ext = ".mp4"
+	case "video/x-matroska":
+		ext = ".mkv"
+	case "video/webm":
+		ext = ".webm"
+	case "video/ogg":
+		ext = ".ogv"
+	default:
+		ext = ".bin"
+	}
+
+	// Add extension if missing
+	if filepath.Ext(path) == "" {
+		path += ext
+	}
+
+	// Step 2: Ensure the destination directory exists
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("error creating directory: %w", err)
+	}
+
+	// Step 3: Write the content to the destination file
+	if err := os.WriteFile(path, fileContent, 0644); err != nil {
+		return fmt.Errorf("error writing file: %w", err)
+	}
+
+	log.Println("File saved successfully to:", path)
+	return nil
 }
 
 func GetFile(key string) (string, error) {
