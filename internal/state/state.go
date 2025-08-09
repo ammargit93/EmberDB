@@ -8,3 +8,4 @@ var (
 	AllPeers []string
 	Leader   string
 )
+var Key string = "SecretKeyforAES "

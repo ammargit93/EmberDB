@@ -66,6 +66,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
+
 func FindAllPeers(w http.ResponseWriter, r *http.Request) {
 	clientIP := getClientAddress(r)
 	port := r.Header.Get("X-Port")
@@ -98,4 +99,21 @@ func FindAllPeers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 
 	// json.NewEncoder(w).Encode(resp)
+}
+
+func DeleteNode(w http.ResponseWriter, r *http.Request) {
+	clientIP := getClientAddress(r)
+	port := r.Header.Get("X-Port")
+	if port == "" {
+		http.Error(w, "X-Port header required", http.StatusBadRequest)
+		return
+	}
+	nodeAddr := fmt.Sprintf("http://%s:%s", clientIP, port)
+	_, err := db.Exec(`DELETE FROM peers WHERE address = ?`, nodeAddr)
+	if err != nil {
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+	w.Write([]byte(nodeAddr + "Deleted successfully"))
+
 }

@@ -12,7 +12,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 )
 
 // var (
@@ -34,12 +36,10 @@ type leaderToFollower struct {
 }
 
 func sendRequestToFollowers(data db.Store) error {
-	// Only the leader should be replicating to others
 	if state.Leader != state.NodeAddr {
 		return fmt.Errorf("only the leader should replicate to followers")
 	}
 
-	// Prepare the payload
 	payload := leaderToFollower{
 		Data:   data,
 		Sender: state.NodeAddr,
@@ -97,6 +97,26 @@ func sendRequestToFollowers(data db.Store) error {
 	return nil
 }
 
+func heartbeatSignal() {
+
+	for _, peer := range state.AllPeers {
+		if peer == state.NodeAddr || peer == state.Leader {
+			continue
+		}
+
+		ip := api.SplitIPandIncrementPort(peer)
+		resp, err := http.Post(ip+"/heartbeat", "text/plain", strings.NewReader(string("Im alive!")))
+		if err != nil {
+			fmt.Println("Hearbeat signals to", peer, ":", err)
+			continue
+		}
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Println("Response from", peer, ":", string(body))
+		resp.Body.Close()
+	}
+
+}
+
 func handleConnection(conn net.Conn) {
 	scanner := bufio.NewScanner(conn)
 
@@ -128,6 +148,21 @@ func main() {
 	fmt.Println("Server running at " + Port)
 
 	_ = RegisterNode(Port)
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-c
+		fmt.Println("\nShutting down node:", state.NodeAddr)
+		if err := DeleteNode(Port); err != nil {
+			fmt.Println("Error deleting node from registry:", err)
+		} else {
+			fmt.Println("Node successfully removed from registry.")
+		}
+		os.Exit(0)
+	}()
+
 	state.Mu.Lock()
 	defer state.Mu.Unlock()
 
@@ -136,7 +171,7 @@ func main() {
 	fmt.Println("Node addresses:", state.AllPeers)
 	port := api.IncrementPort(Port)
 	go api.StartHTTPServer(port)
-
+	go heartbeatSignal()
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -145,4 +180,5 @@ func main() {
 
 		go handleConnection(conn)
 	}
+
 }

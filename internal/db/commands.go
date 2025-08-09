@@ -1,6 +1,7 @@
 package db
 
 import (
+	"emberdb/internal/state"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,8 +15,10 @@ type Store struct {
 }
 
 var (
-	StoreStructure = Store{Text: make(map[string]any)}
-	mu             sync.Mutex
+	StoreStructure = Store{
+		Text: make(map[string]any),
+	}
+	mu sync.Mutex
 )
 
 func SaveFile(key string, path string) error {
@@ -115,10 +118,12 @@ func UpdateValue(key string, value string) bool {
 func SetValue(key string, value string) bool {
 	mu.Lock()
 	defer mu.Unlock()
+
 	_, exists := StoreStructure.Text[key].(string)
 	if exists {
 		return true
 	} else {
+		value, _ := Encrypt([]byte(state.Key), []byte(value))
 		StoreStructure.Text[key] = value
 		return false
 	}
@@ -130,7 +135,9 @@ func GetValue(key string) any {
 	defer mu.Unlock()
 	for k, v := range StoreStructure.Text {
 		if key == k {
-			return v
+			new_v := v.([]byte)
+			v, _ := Decrypt([]byte(state.Key), new_v)
+			return string(v)
 		}
 	}
 	return "No such key exists in the store."

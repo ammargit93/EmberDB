@@ -4,6 +4,7 @@ import (
 	"emberdb/internal/db"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -32,8 +33,17 @@ func StartHTTPServer(port string) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "replicated"})
 	})
 
+	http.HandleFunc("/heartbeat", func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		log.Println(r.Body)
+		w.Header().Set("Content-Type", "plain/text")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Coool"))
+	})
+
 	err := http.ListenAndServe(port, nil)
 	if err != nil {
 		fmt.Println("Failed to start HTTP server:", err)
 	}
+
 }

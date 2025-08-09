@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type registerResponse struct {
@@ -44,5 +45,22 @@ func RegisterNode(port string) error {
 	state.Leader = regResp.Leader
 	state.Mu.Unlock()
 
+	return nil
+}
+
+func DeleteNode(port string) error {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", "http://localhost:5050/delete_node", nil)
+	req.Header.Set("X-Port", strings.TrimPrefix(port, ":"))
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Request error:", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println("Delete node response:", string(body))
 	return nil
 }

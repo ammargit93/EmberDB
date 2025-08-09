@@ -39,5 +39,6 @@ func main() {
 	fmt.Println("Registry server started on :5050")
 	http.HandleFunc("/register", Register)
 	http.HandleFunc("/find_peers", FindAllPeers)
+	http.HandleFunc("/delete_node", DeleteNode)
 	http.ListenAndServe(":5050", nil)
 }
