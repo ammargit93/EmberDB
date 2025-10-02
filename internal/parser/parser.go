@@ -9,14 +9,14 @@ import (
 
 var (
 	commandParser = map[string]CommandFunc{
-		"SET":     handleSet,
-		"GET":     handleGet,
-		"DEL":     handleDelete,
-		"UPDATE":  handleUpdate,
-		"GETALL":  getAllPairs,
-		"SETFILE": setFile,
-		"GETFILE": getFile,
-		// "SAVEFILE": saveFile,
+		"SET":      handleSet,
+		"GET":      handleGet,
+		"DEL":      handleDelete,
+		"UPDATE":   handleUpdate,
+		"GETALL":   getAllPairs,
+		"SETFILE":  setFile,
+		"GETFILE":  getFile,
+		"SAVEFILE": saveFile,
 	}
 )
 
@@ -41,6 +41,17 @@ func setFile(args []string) string {
 		return "Error setting the file"
 	}
 	return "File successfully set"
+}
+
+func saveFile(args []string) string {
+	if len(args) < 2 {
+		return "Missing arguments for SAVEFILE"
+	}
+	if err := db.SaveFile(args[0], args[1]); err != nil {
+		return "Error Saving the file"
+	}
+	return "File Successfully saved to " + args[1]
+
 }
 
 func getAllPairs(args []string) string {
