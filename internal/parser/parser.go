@@ -9,13 +9,14 @@ import (
 
 var (
 	commandParser = map[string]CommandFunc{
-		"SET":     handleSet,
-		"GET":     handleGet,
-		"DEL":     handleDelete,
-		"UPDATE":  handleUpdate,
-		"GETALL":  getAllPairs,
-		"SETFILE": setFile,
-		"GETFILE": getFile,
+		"SET":      handleSet,
+		"GET":      handleGet,
+		"DEL":      handleDelete,
+		"UPDATE":   handleUpdate,
+		"GETALL":   getAllPairs,
+		"SETFILE":  setFile,
+		"GETFILE":  getFile,
+		"SAVEFILE": saveFile,
 	}
 )
 
