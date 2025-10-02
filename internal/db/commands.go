@@ -38,6 +38,14 @@ func SetFile(key string, value string) (error, bool) {
 	return nil, true
 }
 
+func SaveFile(key string, fileName string) error {
+	fileContent, _ := GetFile(key)
+
+	fmt.Println(fileContent)
+	os.WriteFile(fileName, []byte(fileContent), 0755)
+	return nil
+}
+
 func GetAllData() string {
 	mu.Lock()
 	defer mu.Unlock()
