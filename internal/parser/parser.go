@@ -13,7 +13,6 @@ var (
 		"GET":      handleGet,
 		"DEL":      handleDelete,
 		"UPDATE":   handleUpdate,
-		"GETALL":   getAllPairs,
 		"SETFILE":  setFile,
 		"GETFILE":  getFile,
 		"SAVEFILE": saveFile,
@@ -52,10 +51,6 @@ func saveFile(args []string) string {
 	}
 	return "File Successfully saved to " + args[1]
 
-}
-
-func getAllPairs(args []string) string {
-	return db.GetAllData()
 }
 
 func handleSet(args []string) string {

@@ -18,8 +18,7 @@ var (
 func GetFile(key string) (string, error) {
 	mu.Lock()
 	defer mu.Unlock()
-	var buf []byte
-	buf = StoreStructure.Text[key].([]byte)
+	var buf []byte = StoreStructure.Text[key].([]byte)
 	return string(buf), nil
 }
 
@@ -44,17 +43,6 @@ func SaveFile(key string, fileName string) error {
 	fmt.Println(fileContent)
 	os.WriteFile(fileName, []byte(fileContent), 0755)
 	return nil
-}
-
-func GetAllData() string {
-	mu.Lock()
-	defer mu.Unlock()
-	allPairs := ""
-	for k, v := range StoreStructure.Text {
-		allPairs += k + " : " + v.(string) + "\n"
-	}
-	// fmt.Println(allPairs)
-	return allPairs
 }
 
 func UpdateValue(key string, value string) bool {
