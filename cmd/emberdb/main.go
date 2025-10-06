@@ -2,10 +2,6 @@ package main
 
 import (
 	"bufio"
-	"emberdb/internal/api"
-	"emberdb/internal/db"
-	"emberdb/internal/parser"
-	"emberdb/internal/state"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +9,11 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"emberdb/internal/api"
+	"emberdb/internal/db"
+	"emberdb/internal/parser"
+	"emberdb/internal/state"
 )
 
 // var (
@@ -104,7 +105,9 @@ func handleConnection(conn net.Conn) {
 		message := scanner.Text()
 		msgArr := strings.Split(message, " ")
 		output, _ := parser.ParseAndExecute(msgArr)
+
 		conn.Write([]byte(output + "\n<END>\n"))
+
 		if strings.ToUpper(msgArr[0]) == "SET" {
 			if state.NodeAddr == state.Leader {
 				sendRequestToFollowers(db.StoreStructure)

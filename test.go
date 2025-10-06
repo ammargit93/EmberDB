@@ -1,18 +1,15 @@
 package main
 
 import (
-	"emberdb/sdk"
 	"fmt"
+
+	"emberdb/client/sdk"
 )
 
 func main() {
-	fmt.Println("Hello World")
-	sdk.Connect("localhost:1010")
+	// fmt.Println("Hello World")
+	client := sdk.Connect("localhost:1010")
+	val, _ := client.GetValue("a")
+	fmt.Println(val)
 
-	err := sdk.SetValue("a", "10")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(err)
-	fmt.Println("Hello World")
 }

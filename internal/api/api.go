@@ -1,10 +1,11 @@
 package api
 
 import (
-	"emberdb/internal/db"
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"emberdb/internal/db"
 )
 
 type followerResponse struct {

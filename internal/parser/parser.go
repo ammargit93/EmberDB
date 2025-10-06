@@ -2,9 +2,10 @@
 package parser
 
 import (
-	"emberdb/internal/db"
 	"fmt"
 	"strings"
+
+	"emberdb/internal/db"
 )
 
 var (
