@@ -57,3 +57,57 @@ func (client Client) GetValue(key string) (any, error) {
 	return line, err
 
 }
+
+func (client Client) DelValue(key string) error {
+
+	command := "DEL " + key
+
+	_, err := client.conn.Write([]byte(command + "\n"))
+	if err != nil {
+		fmt.Println("Error sending command:", err)
+		return err
+	}
+
+	return err
+}
+
+func (client Client) UpdateValue(key string, value string) error {
+
+	command := "UPDATE " + key + " " + value
+
+	_, err := client.conn.Write([]byte(command + "\n"))
+	if err != nil {
+		fmt.Println("Error sending command:", err)
+		return err
+	}
+
+	return err
+}
+
+func (client Client) SetFile(key string, value string) error {
+
+	command := "SETFILE " + key + " " + value
+
+	_, err := client.conn.Write([]byte(command + "\n"))
+	if err != nil {
+		fmt.Println("Error sending command:", err)
+		return err
+	}
+
+	return err
+}
+
+func (client Client) GetFile(key string) (string, error) {
+
+	command := "GETFILE " + key
+
+	_, err := client.conn.Write([]byte(command + "\n"))
+	if err != nil {
+		fmt.Println("Error sending command:", err)
+		return err.Error(), err
+	}
+	reader := bufio.NewReader(client.conn)
+	line, err := reader.ReadString('\n')
+
+	return line, err
+}
