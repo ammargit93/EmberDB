@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 // var conn net.Conn
@@ -23,6 +24,15 @@ func Connect(addr string) Client {
 	return client
 }
 
+func flushBuffer(client Client) error {
+	reader := bufio.NewReader(client.conn)
+	_, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("error reading response: %v", err)
+	}
+	return nil
+}
+
 func (client Client) SetValue(key string, value any) error {
 	valString, ok := value.(string)
 
@@ -37,6 +47,7 @@ func (client Client) SetValue(key string, value any) error {
 		fmt.Println("Error sending command:", err)
 		return err
 	}
+	_ = flushBuffer(client)
 
 	return nil
 
@@ -53,6 +64,7 @@ func (client Client) GetValue(key string) (any, error) {
 	}
 	reader := bufio.NewReader(client.conn)
 	line, err := reader.ReadString('\n')
+	line = strings.Replace(line, "\n", "", -1)
 
 	return line, err
 
@@ -67,6 +79,7 @@ func (client Client) DelValue(key string) error {
 		fmt.Println("Error sending command:", err)
 		return err
 	}
+	_ = flushBuffer(client)
 
 	return err
 }
@@ -80,6 +93,7 @@ func (client Client) UpdateValue(key string, value string) error {
 		fmt.Println("Error sending command:", err)
 		return err
 	}
+	_ = flushBuffer(client)
 
 	return err
 }
@@ -93,6 +107,7 @@ func (client Client) SetFile(key string, value string) error {
 		fmt.Println("Error sending command:", err)
 		return err
 	}
+	_ = flushBuffer(client)
 
 	return err
 }
@@ -107,7 +122,17 @@ func (client Client) GetFile(key string) (string, error) {
 		return err.Error(), err
 	}
 	reader := bufio.NewReader(client.conn)
-	line, err := reader.ReadString('\n')
+	lineArr := []string{}
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		if strings.TrimSpace(line) == "<END>" {
+			break
+		}
+		lineArr = append(lineArr, line)
+	}
 
-	return line, err
+	return strings.Join(lineArr, "\n"), err
 }

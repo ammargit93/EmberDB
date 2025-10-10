@@ -8,7 +8,10 @@ import (
 
 func main() {
 	client := sdk.Connect("localhost:1010")
-	val, _ := client.GetValue("a")
+
+	_ = client.SetFile("a", "C:\\Users\\Ammar1\\go\\emberdb\\README.md")
+
+	val, _ := client.GetFile("a")
 	fmt.Println(val)
 
 }
