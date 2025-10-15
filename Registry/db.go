@@ -19,10 +19,11 @@ func InitDB() {
 		log.Fatal(err)
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS peers (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		address TEXT UNIQUE NOT NULL
-	);`)
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS peers (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			address TEXT UNIQUE NOT NULL
+		);`)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,6 +67,8 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
+
+
 func FindAllPeers(w http.ResponseWriter, r *http.Request) {
 	clientIP := getClientAddress(r)
 	port := r.Header.Get("X-Port")

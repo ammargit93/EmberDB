@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"emberdb/client/sdk"
+	"emberdb/client"
 )
 
 func main() {
-	client := sdk.Connect("localhost:1010")
+	client := client.Connect("localhost:1010")
 
 	_ = client.SetFile("a", "C:\\Users\\Ammar1\\go\\emberdb\\README.md")
 

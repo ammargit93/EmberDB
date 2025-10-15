@@ -108,7 +108,8 @@ func handleConnection(conn net.Conn) {
 
 		conn.Write([]byte(output + "\n<END>\n"))
 
-		if strings.ToUpper(msgArr[0]) == "SET" {
+		if strings.HasPrefix(strings.ToUpper(msgArr[0]), "SET") {
+
 			if state.NodeAddr == state.Leader {
 				sendRequestToFollowers(db.StoreStructure)
 				fmt.Println("Starting replication from leader:", state.NodeAddr)
