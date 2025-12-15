@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -12,7 +14,7 @@ func WriteToJSON(peer string) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	file.Write([]byte(peer))
+	file.Write([]byte(peer + "\n"))
 	defer file.Close()
 }
 
@@ -30,10 +32,27 @@ func main() {
 			PeerIP string `json:"peerip"`
 		}
 		var resp Response
-		resp.PeerIP = c.Context().RemoteAddr().String()
+		var ip string
+		localAddr := strings.Split(c.Context().LocalAddr().String(), ":")
+		if len(localAddr) > 1 {
+			ip = localAddr[0]
+		}
+		resp.PeerIP = ip + ":" + c.Get("X-Port")
+		fmt.Println(resp.PeerIP)
 		WriteToJSON(resp.PeerIP)
 		return c.JSON(fiber.Map{"peerip": resp.PeerIP})
 	})
 
-	app.Listen(":5050")
+	app.Get("/fetch-peers", func(c *fiber.Ctx) error {
+		content, err := os.ReadFile("peers.txt")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		peers := strings.Split(string(content), "\n")
+		return c.JSON(fiber.Map{"peerip": peers[:len(peers)-1]})
+	})
+
+	fmt.Println("Registry Started")
+
+	log.Fatal(app.Listen(":5050"))
 }
