@@ -1,4 +1,4 @@
-# EmberDB
+# EmberDB v2
 
 EmberDB is a minimal distributed key-value (KV) store implemented in Go. It demonstrates basic distributed system concepts, including leader-follower replication, peer discovery, and a TCP-based command interface.
 

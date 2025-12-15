@@ -1,43 +1,39 @@
 package main
 
 import (
-	"fmt"
-	"net"
-	"net/http"
-	"strings"
-	// "sync"
+	"log"
+	"os"
+
+	"github.com/gofiber/fiber/v2"
 )
 
-var (
-	NodeStore = []string{}
-	// mu        sync.Mutex
-)
-
-type registerResponse struct {
-	NodeAddr  string   `json:"nodeaddr"`
-	NodeArray []string `json:"nodearray"`
-	Leader    string   `json:"leader"`
-}
-
-func getClientAddress(r *http.Request) string {
-	ip := r.RemoteAddr
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		ip = strings.Split(forwarded, ",")[0]
-	}
-	host, _, err := net.SplitHostPort(ip)
+func WriteToJSON(peer string) {
+	file, err := os.OpenFile("peers.txt", os.O_CREATE|os.O_APPEND, 0755)
 	if err != nil {
-		host = ip
+		log.Fatalln(err)
 	}
-	if host == "::1" {
-		host = "localhost"
-	}
-	return host
+	file.Write([]byte(peer))
+	defer file.Close()
 }
 
 func main() {
-	InitDB()
-	fmt.Println("Registry server started on :5050")
-	http.HandleFunc("/register", Register)
-	http.HandleFunc("/find_peers", FindAllPeers)
-	http.ListenAndServe(":5050", nil)
+	app := fiber.New()
+
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"message": "Registry Active",
+		})
+	})
+
+	app.Post("/register", func(c *fiber.Ctx) error {
+		type Response struct {
+			PeerIP string `json:"peerip"`
+		}
+		var resp Response
+		resp.PeerIP = c.Context().RemoteAddr().String()
+		WriteToJSON(resp.PeerIP)
+		return c.JSON(fiber.Map{"peerip": resp.PeerIP})
+	})
+
+	app.Listen(":5050")
 }

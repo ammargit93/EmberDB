@@ -25,7 +25,7 @@ jobs:
         run: go build -o emberdb.exe ./cmd/emberdb/
 
       - name: Build client
-        run: go build -o client.exe ./client/
+        run: go build -o client.exe client.go
 
       - name: Prepare release folder
         run: |
