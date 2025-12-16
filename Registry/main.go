@@ -4,18 +4,30 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func WriteToJSON(peer string) {
+func WriteToFile(peer string) {
 	file, err := os.OpenFile("peers.txt", os.O_CREATE|os.O_APPEND, 0755)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	file.Write([]byte(peer + "\n"))
 	defer file.Close()
+}
+
+func peerExists(addr string) bool {
+	content, err := os.ReadFile("peers.txt")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	peers := strings.Split(string(content), "\n")
+	peers = peers[:len(peers)-1]
+	return slices.Contains(peers, addr)
+
 }
 
 func main() {
@@ -39,7 +51,9 @@ func main() {
 		}
 		resp.PeerIP = ip + ":" + c.Get("X-Port")
 		fmt.Println(resp.PeerIP)
-		WriteToJSON(resp.PeerIP)
+		if !peerExists(resp.PeerIP) {
+			WriteToFile(resp.PeerIP)
+		}
 		return c.JSON(fiber.Map{"peerip": resp.PeerIP})
 	})
 

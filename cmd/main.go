@@ -58,8 +58,6 @@ func fetchPeers() {
 			time.Sleep(5 * time.Second)
 			continue
 		}
-
-		// update global slice
 		mutx.Lock()
 		ActivePeers = parsed.PeerIP
 		mutx.Unlock()
