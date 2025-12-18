@@ -1,1 +1,3 @@
-Registry/*.db
+/venv/
+/sdk/python/__pycache__/
+/examples/__pycache__/
