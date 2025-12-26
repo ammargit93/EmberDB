@@ -14,9 +14,9 @@ var (
 func main() {
 	app := fiber.New()
 
-	app.Get("/", func(c *fiber.Ctx) error {
+	app.Get("/:name", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
-			"message": "Hello World",
+			"message": "Hello " + c.Params("name"),
 		})
 	})
 

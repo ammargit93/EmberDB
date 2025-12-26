@@ -8,3 +8,8 @@ class Client:
         resp = requests.post(self.addr+"/set",  data='{"key": "%s", "value": %s}' % (key, value),headers={"Content-Type":"application/json"})     
         return resp.json()
     
+    def GetKey(self, key):
+        resp = requests.get(self.addr+"/get/"+key)     
+        return resp.json()
+    
+    

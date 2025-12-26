@@ -3,7 +3,6 @@ package sdk
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -38,7 +37,23 @@ func (client Client) SetKey(key string, value any) (Data, error) {
 	}
 	defer resp.Body.Close()
 	respContent, _ := io.ReadAll(resp.Body)
-	fmt.Println(string(respContent))
+	var response Data
+	json.Unmarshal(respContent, &response)
+	return response, err
+}
+
+func (client Client) GetKey(key string) (Data, error) {
+
+	ct := &http.Client{}
+
+	req, _ := http.NewRequest("GET", client.Addr+"/get/"+key, nil)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := ct.Do(req)
+	if err != nil {
+		return Data{}, err
+	}
+	defer resp.Body.Close()
+	respContent, _ := io.ReadAll(resp.Body)
 	var response Data
 	json.Unmarshal(respContent, &response)
 	return response, err
