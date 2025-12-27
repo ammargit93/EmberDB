@@ -7,13 +7,13 @@ import (
 
 func main() {
 	client := sdk.Connect("http://localhost:9182")
-	resp, err := client.SetKey("lmfao", "an internet slang")
+
+	values, err := client.MGetKey([]string{"a", "b"})
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
-	resp, err = client.GetKey("lmfao")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(resp.Value)
+
+	fmt.Println(values["a"]) // 10
+	fmt.Println(values["b"]) // 20
 }

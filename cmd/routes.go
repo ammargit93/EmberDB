@@ -80,3 +80,42 @@ func GetAll(c *fiber.Ctx) error {
 		"Data": DataStore,
 	})
 }
+
+func MSet(c *fiber.Ctx) error {
+	var data map[string]any
+	if err := c.BodyParser(&data); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid request body",
+		})
+	}
+	mutx.Lock()
+	defer mutx.Unlock()
+	for k, v := range data {
+		DataStore[k] = v
+	}
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"set": data,
+	})
+}
+
+func MGet(c *fiber.Ctx) error {
+	var keys []string
+	if err := c.BodyParser(&keys); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid request body, expected JSON array of keys",
+		})
+	}
+	mutx.RLock()
+	defer mutx.RUnlock()
+	res := make(map[string]any)
+	for _, k := range keys {
+		if v, ok := DataStore[k]; ok {
+			res[k] = v
+		} else {
+			res[k] = nil
+		}
+	}
+	return c.JSON(fiber.Map{
+		"values": res,
+	})
+}

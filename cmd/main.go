@@ -22,6 +22,10 @@ func main() {
 
 	app.Post("/set", SetKey)
 
+	app.Post("/mset", MSet)
+
+	app.Post("/mget", MGet)
+
 	app.Get("/get/:key", GetKey)
 
 	app.Patch("/update", UpdateKey)
