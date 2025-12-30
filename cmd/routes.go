@@ -1,6 +1,14 @@
 package main
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"emberdb/state"
+	"fmt"
+	"sync"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+var mu sync.RWMutex
 
 func SetKey(c *fiber.Ctx) error {
 	var data Data
@@ -9,15 +17,15 @@ func SetKey(c *fiber.Ctx) error {
 			"error": "invalid request body",
 		})
 	}
-	mutx.Lock()
-	defer mutx.Unlock()
-	if _, exists := DataStore[data.Key]; exists {
+	mu.Lock()
+	defer mu.Unlock()
+	if _, exists := state.DataStore[data.Key]; exists {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 			"error": "key already exists",
 			"key":   data.Key,
 		})
 	}
-	DataStore[data.Key] = data.Value
+	state.DataStore[data.Key] = data.Value
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"key":   data.Key,
 		"value": data.Value,
@@ -25,9 +33,9 @@ func SetKey(c *fiber.Ctx) error {
 }
 
 func GetKey(c *fiber.Ctx) error {
-	mutx.Lock()
-	val := DataStore[c.Params("key")]
-	mutx.Unlock()
+	mu.Lock()
+	val := state.DataStore[c.Params("key")]
+	mu.Unlock()
 	return c.JSON(fiber.Map{
 		"value": val,
 	})
@@ -42,15 +50,15 @@ func UpdateKey(c *fiber.Ctx) error {
 	}
 	key := data.Key
 	value := data.Value
-	mutx.Lock()
-	defer mutx.Unlock()
-	if _, exists := DataStore[key]; !exists {
+	mu.Lock()
+	defer mu.Unlock()
+	if _, exists := state.DataStore[key]; !exists {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "key does not exist",
 			"key":   key,
 		})
 	}
-	DataStore[key] = value
+	state.DataStore[key] = value
 	return c.JSON(fiber.Map{
 		"message": "Successfully updated",
 		"key":     key,
@@ -60,15 +68,15 @@ func UpdateKey(c *fiber.Ctx) error {
 
 func DeleteKey(c *fiber.Ctx) error {
 	key := c.Params("key")
-	mutx.Lock()
-	defer mutx.Unlock()
-	if _, exists := DataStore[key]; !exists {
+	mu.Lock()
+	defer mu.Unlock()
+	if _, exists := state.DataStore[key]; !exists {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "key does not exist",
 			"key":   key,
 		})
 	}
-	delete(DataStore, key)
+	delete(state.DataStore, key)
 	return c.JSON(fiber.Map{
 		"message": "Successfully deleted",
 		"key":     key,
@@ -76,8 +84,9 @@ func DeleteKey(c *fiber.Ctx) error {
 }
 
 func GetAll(c *fiber.Ctx) error {
+	fmt.Println(state.DataStore)
 	return c.JSON(fiber.Map{
-		"Data": DataStore,
+		"Data": state.DataStore,
 	})
 }
 
@@ -88,10 +97,10 @@ func MSet(c *fiber.Ctx) error {
 			"error": "invalid request body",
 		})
 	}
-	mutx.Lock()
-	defer mutx.Unlock()
+	mu.Lock()
+	defer mu.Unlock()
 	for k, v := range data {
-		DataStore[k] = v
+		state.DataStore[k] = v
 	}
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"set": data,
@@ -105,11 +114,11 @@ func MGet(c *fiber.Ctx) error {
 			"error": "invalid request body, expected JSON array of keys",
 		})
 	}
-	mutx.RLock()
-	defer mutx.RUnlock()
+	mu.RLock()
+	defer mu.RUnlock()
 	res := make(map[string]any)
 	for _, k := range keys {
-		if v, ok := DataStore[k]; ok {
+		if v, ok := state.DataStore[k]; ok {
 			res[k] = v
 		} else {
 			res[k] = nil
