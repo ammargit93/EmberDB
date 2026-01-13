@@ -1,7 +1,9 @@
 package main
 
 import (
+	"emberdb/internal"
 	"emberdb/state"
+
 	"fmt"
 	"sync"
 
@@ -31,13 +33,26 @@ func SetKey(c *fiber.Ctx) error {
 		"value": data.Value,
 	})
 }
-
 func GetKey(c *fiber.Ctx) error {
-	mu.Lock()
-	val := state.DataStore[c.Params("key")]
-	mu.Unlock()
+	key := c.Params("key")
+
+	mu.RLock()
+	val, ok := state.DataStore[key]
+	mu.RUnlock()
+
+	if !ok {
+		return fiber.NewError(fiber.StatusNotFound, "key not found")
+	}
+	file, ok := val.(internal.File)
+	if !ok {
+		return fiber.NewError(fiber.StatusInternalServerError, "invalid data type")
+	}
+
+	// Return metadata only (not file.File, which can't be JSON-serialized)
 	return c.JSON(fiber.Map{
-		"value": val,
+		"filename": file.Filename,
+		"hash":     file.Hash,
+		"size":     file.FileSize,
 	})
 }
 
