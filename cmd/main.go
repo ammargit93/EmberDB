@@ -17,7 +17,7 @@ func main() {
 
 	// app.Post("/mget", MGet)
 
-	// app.Patch("/update", UpdateKey)
+	app.Patch("/update", UpdateKey)
 
 	// app.Delete("/delete/:namespace/:key", DeleteKey)
 
