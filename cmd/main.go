@@ -1,8 +1,6 @@
 package main
 
 import (
-	"emberdb/internal"
-
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -13,20 +11,20 @@ func main() {
 
 	app.Post("/set", SetKey)
 
-	app.Get("/get/:key", GetKey)
+	app.Get("/get/:namespace/:key", GetKey)
 
-	app.Post("/mset", MSet)
+	// app.Post("/mset", MSet)
 
-	app.Post("/mget", MGet)
+	// app.Post("/mget", MGet)
 
-	app.Patch("/update", UpdateKey)
+	// app.Patch("/update", UpdateKey)
 
-	app.Delete("/delete/:key", DeleteKey)
+	// app.Delete("/delete/:namespace/:key", DeleteKey)
 
-	app.Get("/getall", GetAll)
+	// app.Get("/getall", GetAll)
 
-	// file logic
-	app.Post("/upload/:key", internal.UploadFile)
+	// // file logic
+	// app.Post("/upload/:key", internal.UploadFile)
 
 	app.Listen(":9182")
 }
