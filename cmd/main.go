@@ -7,8 +7,6 @@ import (
 func main() {
 	app := fiber.New()
 
-	app.Get("/:name", func(c *fiber.Ctx) error { return c.JSON(fiber.Map{"message": "Hello " + c.Params("name")}) })
-
 	app.Post("/set", SetKey)
 
 	app.Get("/get/:namespace/:key", GetKey)
@@ -19,11 +17,11 @@ func main() {
 
 	app.Patch("/update", UpdateKey)
 
-	// app.Delete("/delete/:namespace/:key", DeleteKey)
+	app.Delete("/delete/:namespace/:key", DeleteKey)
 
-	// app.Get("/getall", GetAll)
+	app.Get("/getall", GetAll)
 
-	// // file logic
+	// file logic
 	// app.Post("/upload/:key", internal.UploadFile)
 
 	app.Listen(":9182")

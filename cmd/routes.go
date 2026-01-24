@@ -27,22 +27,30 @@ func SetKey(c *fiber.Ctx) error {
 		Type:  internal.Datatype(internal.InferType(data.Value)),
 		Value: data.Value,
 	}
-	// create namespace if not exists
-	Namespace := internal.Namespace{
-		Name: data.Namespace,
-		Data: map[string]internal.Metadata{
-			data.Key: md,
-		},
-	}
 	mu.Lock()
+	defer mu.Unlock()
 
+	// create namespace if not exists
 	store := &internal.DataStore
 	if store.Namespaces == nil {
 		store.Namespaces = make(map[string]*internal.Namespace)
 	}
-	store.Namespaces[data.Namespace] = &Namespace
 
-	defer mu.Unlock()
+	nms, exists := store.Namespaces[data.Namespace]
+	if !exists {
+		nms = &internal.Namespace{
+			Name: data.Namespace,
+			Data: make(map[string]internal.Metadata),
+		}
+		store.Namespaces[data.Namespace] = nms
+
+	}
+	_, exists = nms.Data[data.Key]
+	if !exists {
+		nms.Data[data.Key] = md
+	} else {
+		return fiber.NewError(fiber.StatusConflict, "Key exists")
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"namespace": data.Namespace,
@@ -111,29 +119,32 @@ func UpdateKey(c *fiber.Ctx) error {
 	})
 }
 
-// func DeleteKey(c *fiber.Ctx) error {
-// 	key := c.Params("key")
-// 	mu.Lock()
-// 	defer mu.Unlock()
-// 	if _, exists := state.DataStore[key]; !exists {
-// 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-// 			"error": "key does not exist",
-// 			"key":   key,
-// 		})
-// 	}
-// 	delete(state.DataStore, key)
-// 	return c.JSON(fiber.Map{
-// 		"message": "Successfully deleted",
-// 		"key":     key,
-// 	})
-// }
+func DeleteKey(c *fiber.Ctx) error {
+	key := c.Params("key")
+	namespace := c.Params("namespace")
+	mu.Lock()
+	defer mu.Unlock()
 
-// func GetAll(c *fiber.Ctx) error {
-// 	fmt.Println(state.DataStore)
-// 	return c.JSON(fiber.Map{
-// 		"Data": state.DataStore,
-// 	})
-// }
+	store := &internal.DataStore
+	if store.Namespaces == nil {
+		store.Namespaces = make(map[string]*internal.Namespace)
+		return fiber.NewError(fiber.StatusNotFound, "Cannot delete uninitialised store.")
+	}
+	delete(store.Namespaces[namespace].Data, key)
+
+	return c.JSON(fiber.Map{
+		"message":   "Successfully deleted",
+		"key":       key,
+		"namespace": store.Namespaces[namespace],
+	})
+}
+
+func GetAll(c *fiber.Ctx) error {
+	store := &internal.DataStore
+	return c.JSON(fiber.Map{
+		"Data": store.Namespaces,
+	})
+}
 
 // func MSet(c *fiber.Ctx) error {
 // 	var data map[string]any
