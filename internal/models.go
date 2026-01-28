@@ -1,5 +1,11 @@
 package internal
 
+import (
+	"sync"
+
+	"github.com/gofiber/fiber/v2"
+)
+
 type Datatype string
 
 const (
@@ -39,6 +45,118 @@ func InferType(v interface{}) string {
 	default:
 		return "file"
 	}
+}
+
+var mu sync.RWMutex
+
+func (store *Store) Insert(namespace string, key string, value interface{}) (bool, error) {
+	md := Metadata{
+		Type:  Datatype(InferType(value)),
+		Value: value,
+	}
+	mu.Lock()
+	defer mu.Unlock()
+
+	// create namespace if not exists
+	if store.Namespaces == nil {
+		store.Namespaces = make(map[string]*Namespace)
+	}
+
+	nms, exists := store.Namespaces[namespace]
+	if !exists {
+		nms = &Namespace{
+			Name: namespace,
+			Data: make(map[string]Metadata),
+		}
+		store.Namespaces[namespace] = nms
+
+	}
+	_, exists = nms.Data[key]
+	if !exists {
+		nms.Data[key] = md
+	} else {
+		return false, fiber.NewError(fiber.StatusConflict, "Key exists")
+	}
+	return true, nil
+}
+
+func (store *Store) Get(namespace string, key string) (Metadata, error) {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	nms, exists := store.Namespaces[namespace]
+	if !exists {
+		return Metadata{}, fiber.NewError(fiber.StatusNotFound, "Namespace not found")
+	}
+
+	md, exists := nms.Data[key]
+	if !exists {
+		return Metadata{}, fiber.NewError(fiber.StatusNotFound, "Key not found")
+	}
+
+	return md, nil
+}
+
+func (store *Store) Update(namespace string, key string, value interface{}) (Metadata, error) {
+	md := Metadata{
+		Type:  Datatype(InferType(value)),
+		Value: value,
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if store.Namespaces == nil {
+		return Metadata{}, fiber.NewError(fiber.StatusNotFound, "Store uninitialized")
+	}
+
+	nms, exists := store.Namespaces[namespace]
+	if !exists {
+		return Metadata{}, fiber.NewError(fiber.StatusNotFound, "Namespace not found")
+	}
+
+	nms.Data[key] = md
+	return md, nil
+}
+
+func (store *Store) Delete(namespace string, key string) error {
+	mu.Lock()
+	defer mu.Unlock()
+
+	nms, exists := store.Namespaces[namespace]
+	if !exists {
+		return fiber.NewError(fiber.StatusNotFound, "Namespace not found")
+	}
+
+	if _, exists := nms.Data[key]; !exists {
+		return fiber.NewError(fiber.StatusNotFound, "Key not found")
+	}
+
+	delete(nms.Data, key)
+	return nil
+}
+
+func (store *Store) GetAll() map[string]*Namespace {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	if store.Namespaces == nil {
+		return make(map[string]*Namespace)
+	}
+
+	copyMap := make(map[string]*Namespace, len(store.Namespaces))
+	for ns, n := range store.Namespaces {
+		newNS := &Namespace{
+			Name: n.Name,
+			Data: make(map[string]Metadata, len(n.Data)),
+		}
+		for k, v := range n.Data {
+			newNS.Data[k] = v
+		}
+		copyMap[ns] = newNS
+	}
+
+	return copyMap
 }
 
 // db

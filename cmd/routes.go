@@ -22,34 +22,10 @@ func SetKey(c *fiber.Ctx) error {
 			"error": "invalid request body",
 		})
 	}
-	// create Metadata
-	md := internal.Metadata{
-		Type:  internal.Datatype(internal.InferType(data.Value)),
-		Value: data.Value,
-	}
-	mu.Lock()
-	defer mu.Unlock()
-
-	// create namespace if not exists
 	store := &internal.DataStore
-	if store.Namespaces == nil {
-		store.Namespaces = make(map[string]*internal.Namespace)
-	}
-
-	nms, exists := store.Namespaces[data.Namespace]
-	if !exists {
-		nms = &internal.Namespace{
-			Name: data.Namespace,
-			Data: make(map[string]internal.Metadata),
-		}
-		store.Namespaces[data.Namespace] = nms
-
-	}
-	_, exists = nms.Data[data.Key]
-	if !exists {
-		nms.Data[data.Key] = md
-	} else {
-		return fiber.NewError(fiber.StatusConflict, "Key exists")
+	ok, err := store.Insert(data.Namespace, data.Key, data.Value)
+	if !ok {
+		return err
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -64,19 +40,10 @@ func GetKey(c *fiber.Ctx) error {
 	key := c.Params("key")
 	namespace := c.Params("namespace")
 
-	mu.RLock()
-	nms, ok := internal.DataStore.Namespaces[namespace]
-	if !ok {
-		return fiber.NewError(fiber.StatusNotFound, "Namespace not found")
-	}
-	md, ok := nms.Data[key]
-	if !ok {
-		return fiber.NewError(fiber.StatusNotFound, "key not found")
-	}
-	mu.RUnlock()
-
+	store := &internal.DataStore
+	md, _ := store.Get(namespace, key)
 	return c.JSON(fiber.Map{
-		"namespace": nms,
+		"namespace": md,
 		"key":       key,
 		"value":     md.Value,
 	})
@@ -89,49 +56,21 @@ func UpdateKey(c *fiber.Ctx) error {
 			"error": "invalid request body",
 		})
 	}
-	namespace := data.Namespace
-	mu.Lock()
-	defer mu.Unlock()
-
-	// create Metadata
-	md := internal.Metadata{
-		Type:  internal.Datatype(internal.InferType(data.Value)),
-		Value: data.Value,
-	}
-	// create namespace if not exists
-	Namespace := internal.Namespace{
-		Name: namespace,
-		Data: map[string]internal.Metadata{
-			data.Key: md,
-		},
-	}
 
 	store := &internal.DataStore
-	if store.Namespaces == nil {
-		store.Namespaces = make(map[string]*internal.Namespace)
-		return fiber.NewError(fiber.StatusNotFound, "Cannot update uninitialised store.")
-	}
-	store.Namespaces[namespace] = &Namespace
-
+	md, _ := store.Update(data.Namespace, data.Key, data.Value)
 	return c.JSON(fiber.Map{
 		"message":   "Successfully updated",
-		"namespace": store.Namespaces[namespace],
+		"namespace": store.Namespaces[data.Namespace],
+		"metadata":  md,
 	})
 }
 
 func DeleteKey(c *fiber.Ctx) error {
 	key := c.Params("key")
 	namespace := c.Params("namespace")
-	mu.Lock()
-	defer mu.Unlock()
-
 	store := &internal.DataStore
-	if store.Namespaces == nil {
-		store.Namespaces = make(map[string]*internal.Namespace)
-		return fiber.NewError(fiber.StatusNotFound, "Cannot delete uninitialised store.")
-	}
-	delete(store.Namespaces[namespace].Data, key)
-
+	store.Delete(namespace, key)
 	return c.JSON(fiber.Map{
 		"message":   "Successfully deleted",
 		"key":       key,
@@ -141,46 +80,8 @@ func DeleteKey(c *fiber.Ctx) error {
 
 func GetAll(c *fiber.Ctx) error {
 	store := &internal.DataStore
+	result := store.GetAll()
 	return c.JSON(fiber.Map{
-		"Data": store.Namespaces,
+		"Data": result,
 	})
 }
-
-// func MSet(c *fiber.Ctx) error {
-// 	var data map[string]any
-// 	if err := c.BodyParser(&data); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-// 			"error": "invalid request body",
-// 		})
-// 	}
-// 	mu.Lock()
-// 	defer mu.Unlock()
-// 	for k, v := range data {
-// 		state.DataStore[k] = v
-// 	}
-// 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-// 		"set": data,
-// 	})
-// }
-
-// func MGet(c *fiber.Ctx) error {
-// 	var keys []string
-// 	if err := c.BodyParser(&keys); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-// 			"error": "invalid request body, expected JSON array of keys",
-// 		})
-// 	}
-// 	mu.RLock()
-// 	defer mu.RUnlock()
-// 	res := make(map[string]any)
-// 	for _, k := range keys {
-// 		if v, ok := state.DataStore[k]; ok {
-// 			res[k] = v
-// 		} else {
-// 			res[k] = nil
-// 		}
-// 	}
-// 	return c.JSON(fiber.Map{
-// 		"values": res,
-// 	})
-// }

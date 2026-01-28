@@ -1,67 +1,100 @@
 package internal
 
-// import (
-// 	"crypto/sha256"
-// 	"emberdb/state"
-// 	"encoding/hex"
-// 	"fmt"
-// 	"io"
-// 	"sync"
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
+	"sync"
 
-// 	"github.com/gofiber/fiber/v2"
-// )
+	"github.com/gofiber/fiber/v2"
+)
 
-// var mu sync.RWMutex
+// File represents a file stored in a namespace
+type File struct {
+	Filename string `json:"filename"`
+	Data     []byte `json:"-"`    // don't expose raw bytes in API
+	Hash     string `json:"hash"` // SHA256 hash
+	FileSize int    `json:"size"`
+}
 
-// type File struct {
-// 	Filename string `json:"filename"`
-// 	Data     []byte `json:"-"`
-// 	Hash     string `json:"hash"`
-// 	FileSize int    `json:"size"`
-// }
+var mut sync.RWMutex
 
-// func UploadFile(c *fiber.Ctx) error {
-// 	key := c.Params("key")
+// UploadFile handles file uploads and stores them in the EmberDB store
+func UploadFile(c *fiber.Ctx) error {
+	namespace := c.Params("namespace") // must provide namespace as query param
+	key := c.Params("key")
+	if namespace == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "namespace query parameter is required")
+	}
 
-// 	fileHeader, err := c.FormFile("file")
-// 	if err != nil {
-// 		fmt.Println("file is required")
-// 		return fiber.NewError(fiber.StatusBadRequest, "file is required")
-// 	}
-// 	if fileHeader.Size > 100<<20 {
-// 		return fiber.NewError(fiber.StatusBadRequest, "file size exceeds 100MB limit")
-// 	}
+	// Parse uploaded file
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "file is required")
+	}
 
-// 	file, err := fileHeader.Open()
+	if fileHeader.Size > 100<<20 {
+		return fiber.NewError(fiber.StatusBadRequest, "file size exceeds 100MB limit")
+	}
 
-// 	if err != nil {
-// 		return fiber.NewError(fiber.StatusInternalServerError, "cannot open file")
-// 	}
-// 	defer file.Close()
+	file, err := fileHeader.Open()
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "cannot open file")
+	}
+	defer file.Close()
 
-// 	fileBytes, err := io.ReadAll(file)
-// 	if err != nil {
-// 		return fiber.NewError(fiber.StatusInternalServerError, "cannot read file")
-// 	}
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "cannot read file")
+	}
 
-// 	newFile := File{
-// 		Filename: fileHeader.Filename,
-// 		Data:     fileBytes,
-// 		Hash:     generateHash(fileBytes),
-// 		FileSize: int(fileHeader.Size),
-// 	}
+	newFile := File{
+		Filename: fileHeader.Filename,
+		Data:     fileBytes,
+		Hash:     generateHash(fileBytes),
+		FileSize: int(fileHeader.Size),
+	}
 
-// 	mu.Lock()
-// 	state.DataStore[key] = newFile
-// 	mu.Unlock()
+	// Insert file into EmberDB store as Metadata
+	store := &DataStore // global store
 
-// 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-// 		"message": "file uploaded successfully",
-// 		"key":     key,
-// 	})
-// }
+	mut.Lock()
+	defer mut.Unlock()
 
-// func generateHash(data []byte) string {
-// 	hash := sha256.Sum256(data)
-// 	return hex.EncodeToString(hash[:])
-// }
+	// Create namespace if it doesn't exist
+	if store.Namespaces == nil {
+		store.Namespaces = make(map[string]*Namespace)
+	}
+	ns, exists := store.Namespaces[namespace]
+	if !exists {
+		ns = &Namespace{
+			Name: namespace,
+			Data: make(map[string]Metadata),
+		}
+		store.Namespaces[namespace] = ns
+	}
+
+	// Check if key already exists
+	if _, exists := ns.Data[key]; exists {
+		return fiber.NewError(fiber.StatusConflict, "key already exists")
+	}
+
+	// Store file as Metadata
+	ns.Data[key] = Metadata{
+		Type:  TypeFile,
+		Value: newFile,
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message":   "file uploaded successfully",
+		"namespace": namespace,
+		"key":       key,
+		"hash":      newFile.Hash,
+		"size":      newFile.FileSize,
+	})
+}
+
+func generateHash(data []byte) string {
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:])
+}
