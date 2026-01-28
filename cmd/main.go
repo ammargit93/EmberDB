@@ -2,6 +2,7 @@ package main
 
 import (
 	"emberdb/internal"
+	"emberdb/storage"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -20,6 +21,8 @@ func main() {
 	app.Get("/getall", GetAll)
 
 	app.Post("/upload/:namespace/:key", internal.UploadFile)
+
+	go storage.Snap("data/snapshot.json")
 
 	app.Listen(":9182")
 }

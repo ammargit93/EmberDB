@@ -1,0 +1,26 @@
+{
+  "namespaces": {
+    "product": {
+      "name": "product",
+      "data": {
+        "name": {
+          "type": "string",
+          "value": "body wash"
+        },
+        "price": {
+          "type": "float",
+          "value": 0.99
+        }
+      }
+    },
+    "users": {
+      "name": "users",
+      "data": {
+        "name": {
+          "type": "string",
+          "value": "Ammar"
+        }
+      }
+    }
+  }
+}
