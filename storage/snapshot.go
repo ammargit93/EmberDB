@@ -3,13 +3,21 @@ package storage
 import (
 	"emberdb/internal"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 )
 
 var SnapshotPath string = "/data/snapshot.json"
+
+var DurationMap map[string]time.Duration = map[string]time.Duration{
+	"s": time.Second,
+	"m": time.Second * 60,
+	"h": time.Second * 60 * 60,
+}
 
 func Snap(duration time.Duration) {
 	for {
@@ -28,8 +36,8 @@ func projectRoot() (string, error) {
 	return filepath.Dir(cwd), nil
 }
 func saveToJSON() error {
-	mu.RLock()
-	defer mu.RUnlock()
+	internal.DataStore.Mu.RLock()
+	defer internal.DataStore.Mu.RUnlock()
 
 	root, err := projectRoot()
 	if err != nil {
@@ -38,7 +46,7 @@ func saveToJSON() error {
 
 	fullPath := filepath.Join(root, SnapshotPath)
 
-	data, err := json.MarshalIndent(internal.DataStore, "", "  ")
+	data, err := json.MarshalIndent(internal.DataStore.Namespaces, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -48,4 +56,57 @@ func saveToJSON() error {
 	}
 
 	return os.WriteFile(fullPath, data, 0644)
+}
+
+func loadFromJSON() error {
+	internal.DataStore.Mu.Lock()
+	defer internal.DataStore.Mu.Unlock()
+
+	root, err := projectRoot()
+	if err != nil {
+		return err
+	}
+
+	fullPath := filepath.Join(root, SnapshotPath)
+
+	filebytes, err := os.ReadFile(fullPath)
+	if err != nil {
+		return err
+	}
+
+	var store internal.Store
+	if err := json.Unmarshal(filebytes, &store); err != nil {
+		return err
+	}
+
+	internal.DataStore.Namespaces = store.Namespaces
+	return nil
+}
+
+func Spawn() {
+	internal.DataStore.Mu.RLock()
+	defer internal.DataStore.Mu.RUnlock()
+
+	val, exists := internal.ArgMap["snapshot"]
+
+	if !exists {
+		fmt.Println("No --snapshot flag")
+		return
+	} else {
+		number := val[:len(val)-1]
+		unit := val[len(val)-1:]
+		duration, exists := DurationMap[unit]
+		if !exists {
+			fmt.Println("Invalid time unit")
+			return
+		}
+		drtn, err := strconv.Atoi(number)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		go Snap(time.Duration(drtn) * duration)
+	}
+
 }

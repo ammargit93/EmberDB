@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"sync"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -16,8 +15,6 @@ type File struct {
 	Hash     string `json:"hash"` // SHA256 hash
 	FileSize int    `json:"size"`
 }
-
-var mut sync.RWMutex
 
 // UploadFile handles file uploads and stores them in the EmberDB store
 func UploadFile(c *fiber.Ctx) error {
@@ -58,8 +55,8 @@ func UploadFile(c *fiber.Ctx) error {
 	// Insert file into EmberDB store as Metadata
 	store := &DataStore // global store
 
-	mut.Lock()
-	defer mut.Unlock()
+	store.Mu.Lock()
+	defer store.Mu.Unlock()
 
 	// Create namespace if it doesn't exist
 	if store.Namespaces == nil {

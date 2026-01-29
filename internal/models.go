@@ -17,6 +17,7 @@ const (
 )
 
 type Store struct {
+	Mu         sync.RWMutex
 	Namespaces map[string]*Namespace `json:"namespaces"` // map for fast lookup
 }
 
@@ -54,8 +55,8 @@ func (store *Store) Insert(namespace string, key string, value interface{}) (boo
 		Type:  Datatype(InferType(value)),
 		Value: value,
 	}
-	mu.Lock()
-	defer mu.Unlock()
+	store.Mu.Lock()
+	defer store.Mu.Unlock()
 
 	// create namespace if not exists
 	if store.Namespaces == nil {
@@ -81,8 +82,8 @@ func (store *Store) Insert(namespace string, key string, value interface{}) (boo
 }
 
 func (store *Store) Get(namespace string, key string) (Metadata, error) {
-	mu.RLock()
-	defer mu.RUnlock()
+	store.Mu.RLock()
+	defer store.Mu.RUnlock()
 
 	nms, exists := store.Namespaces[namespace]
 	if !exists {
@@ -103,8 +104,8 @@ func (store *Store) Update(namespace string, key string, value interface{}) (Met
 		Value: value,
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
+	store.Mu.Lock()
+	defer store.Mu.Unlock()
 
 	if store.Namespaces == nil {
 		return Metadata{}, fiber.NewError(fiber.StatusNotFound, "Store uninitialized")
@@ -120,8 +121,8 @@ func (store *Store) Update(namespace string, key string, value interface{}) (Met
 }
 
 func (store *Store) Delete(namespace string, key string) error {
-	mu.Lock()
-	defer mu.Unlock()
+	store.Mu.Lock()
+	defer store.Mu.Unlock()
 
 	nms, exists := store.Namespaces[namespace]
 	if !exists {
@@ -137,8 +138,8 @@ func (store *Store) Delete(namespace string, key string) error {
 }
 
 func (store *Store) GetAll() map[string]*Namespace {
-	mu.RLock()
-	defer mu.RUnlock()
+	store.Mu.RLock()
+	defer store.Mu.RUnlock()
 
 	if store.Namespaces == nil {
 		return make(map[string]*Namespace)

@@ -2,12 +2,9 @@ package main
 
 import (
 	"emberdb/internal"
-	"sync"
 
 	"github.com/gofiber/fiber/v2"
 )
-
-var mu sync.RWMutex
 
 type Response struct {
 	Namespace string      `json:"namespace"`
@@ -22,10 +19,18 @@ func SetKey(c *fiber.Ctx) error {
 			"error": "invalid request body",
 		})
 	}
+
 	store := &internal.DataStore
 	ok, err := store.Insert(data.Namespace, data.Key, data.Value)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 	if !ok {
-		return err
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"error": "key already exists",
+		})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -36,14 +41,19 @@ func SetKey(c *fiber.Ctx) error {
 }
 
 func GetKey(c *fiber.Ctx) error {
-
 	key := c.Params("key")
 	namespace := c.Params("namespace")
 
 	store := &internal.DataStore
-	md, _ := store.Get(namespace, key)
+	md, err := store.Get(namespace, key)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
 	return c.JSON(fiber.Map{
-		"namespace": md,
+		"namespace": namespace,
 		"key":       key,
 		"value":     md.Value,
 	})
@@ -58,23 +68,35 @@ func UpdateKey(c *fiber.Ctx) error {
 	}
 
 	store := &internal.DataStore
-	md, _ := store.Update(data.Namespace, data.Key, data.Value)
+	md, err := store.Update(data.Namespace, data.Key, data.Value)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
 	return c.JSON(fiber.Map{
-		"message":   "Successfully updated",
-		"namespace": store.Namespaces[data.Namespace],
-		"metadata":  md,
+		"message":  "Successfully updated",
+		"metadata": md,
 	})
 }
 
 func DeleteKey(c *fiber.Ctx) error {
 	key := c.Params("key")
 	namespace := c.Params("namespace")
+
 	store := &internal.DataStore
-	store.Delete(namespace, key)
+	err := store.Delete(namespace, key)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
 	return c.JSON(fiber.Map{
 		"message":   "Successfully deleted",
 		"key":       key,
-		"namespace": store.Namespaces[namespace],
+		"namespace": namespace,
 	})
 }
 
@@ -82,6 +104,6 @@ func GetAll(c *fiber.Ctx) error {
 	store := &internal.DataStore
 	result := store.GetAll()
 	return c.JSON(fiber.Map{
-		"Data": result,
+		"data": result,
 	})
 }

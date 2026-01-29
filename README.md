@@ -1,20 +1,18 @@
 # EmberDB v2
 
-EmberDB is a minimal key-value (KV) store implemented in Go. It demonstrates basic system concepts, including leader-follower replication, peer discovery.
+EmberDB is a minimal key-value (KV) store implemented in Go. It demonstrates basic system concepts, including basic KV API, Periodic snapshot persistence, file handling.
 
 ## 🚀 Features
 
-**🔑 Leader-Follower Replication**: Only the leader can perform SET commands; changes replicate to followers automatically.
+**🔑 Periodic Snapshot**: Writes data to disk every n seconds, specified with the --snapshot flag.
 
-**🌐 Peer Discovery**: Nodes register with the registry, which tracks all peers and the leader using SQLite3.
+**💻 REST API Interface**: Interact with nodes using simple Set, Get, Update, Delete commands.
 
-**💻 TCP Client Interface**: Interact with nodes using simple GET and SET commands.
+**🔄 Minimal SDK**: Go client library to interact with the API.
 
-**🔄 HTTP Replication**: Followers expose an HTTP endpoint for leader replication.
+**🗄️ Server in Fiber**: Server is built using the Fiber web framework.
 
-**🗄️ Persistent Registry**: Registry stores node info in SQLite3 for reliable discovery.
-
-**📁 File Storage Commands**: SETFILE and GETFILE allow storing and retrieving file contents.
+**📁 File Storage Commands**: Files can be stored as byte arrays.
 
 #
 
@@ -24,29 +22,43 @@ git clone https://github.com/ammargit93/EmberDB.git
 cd EmberDB
 ```
 
-**Start the registry**
+**Start the server**
 ```bash
-cd Registry
-go run . # starts at localhost:5050
+cd cmd
+go run .
 ```
 
-
-**Start the nodes**
+alternatively
 ```bash
-cd cmd\emberbd
-go run . :1010  # leader 
+go run . --snapshot 10s  # saves a snapshot every 10 seconds
 ```
-
 
 **Start the client**
-```bash
-cd client
-go run . :1010 # connect with leader
+Connect using postman or curl
+
+```curl
+# Set a key
+curl -X POST http://localhost:9182/set \
+  -H "Content-Type: application/json" \
+  -d '{"namespace":"users","key":"username","value":"john doe"}'
+
+# Get a key
+curl http://localhost:9182/get/users/username
+
+# Update a key
+curl -X PATCH http://localhost:9182/update \
+  -H "Content-Type: application/json" \
+  -d '{"namespace":"users","key":"username","value":"jane"}'
+
+# Delete a key
+curl -X DELETE http://localhost:9182/delete/users/username
+
 ```
 
-```bash
-ember> SET a 10
-SET OK
-ember> GET a
-10
-```
+### Upcoming
+- Write-Ahead log 
+- Failure detection and crash recovery
+- Enhanced file handling
+- Better client libraries for multiple languages
+- Better Data structures for kv store (skiplist)
+- Distributed systems behavior

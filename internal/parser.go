@@ -2,14 +2,7 @@ package internal
 
 import (
 	"strings"
-	"time"
 )
-
-var DurationMap map[string]time.Duration = map[string]time.Duration{
-	"s": time.Second,
-	"m": time.Second * 60,
-	"h": time.Second * 60 * 60,
-}
 
 func buildMapFromArgs(args *[]string) map[string]string {
 	if ArgMap == nil {
