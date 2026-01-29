@@ -12,15 +12,6 @@
           "value": 0.99
         }
       }
-    },
-    "users": {
-      "name": "users",
-      "data": {
-        "name": {
-          "type": "string",
-          "value": "Ammar"
-        }
-      }
     }
   }
 }

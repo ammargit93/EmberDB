@@ -9,10 +9,12 @@ import (
 	"time"
 )
 
-func Snap(path string) {
+var SnapshotPath string = "/data/snapshot.json"
+
+func Snap(duration time.Duration) {
 	for {
-		serializeToJSON(path)
-		time.Sleep(10 * time.Second)
+		saveToJSON()
+		time.Sleep(duration)
 	}
 }
 
@@ -25,7 +27,7 @@ func projectRoot() (string, error) {
 	}
 	return filepath.Dir(cwd), nil
 }
-func serializeToJSON(path string) error {
+func saveToJSON() error {
 	mu.RLock()
 	defer mu.RUnlock()
 
@@ -34,7 +36,7 @@ func serializeToJSON(path string) error {
 		return err
 	}
 
-	fullPath := filepath.Join(root, path)
+	fullPath := filepath.Join(root, SnapshotPath)
 
 	data, err := json.MarshalIndent(internal.DataStore, "", "  ")
 	if err != nil {
