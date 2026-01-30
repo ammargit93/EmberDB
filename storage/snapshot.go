@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var SnapshotPath string = "/data/snapshot.json"
+const SnapshotPath string = "/data/snapshot.json"
 
 var DurationMap map[string]time.Duration = map[string]time.Duration{
 	"s": time.Second,
@@ -58,7 +58,7 @@ func saveToJSON() error {
 	return os.WriteFile(fullPath, data, 0644)
 }
 
-func loadFromJSON() error {
+func LoadFromJSON() error {
 	internal.DataStore.Mu.Lock()
 	defer internal.DataStore.Mu.Unlock()
 
@@ -75,7 +75,7 @@ func loadFromJSON() error {
 	}
 
 	var store internal.Store
-	if err := json.Unmarshal(filebytes, &store); err != nil {
+	if err := json.Unmarshal(filebytes, &store.Namespaces); err != nil {
 		return err
 	}
 
@@ -90,23 +90,22 @@ func Spawn() {
 	val, exists := internal.ArgMap["snapshot"]
 
 	if !exists {
-		fmt.Println("No --snapshot flag")
-		return
-	} else {
-		number := val[:len(val)-1]
-		unit := val[len(val)-1:]
-		duration, exists := DurationMap[unit]
-		if !exists {
-			fmt.Println("Invalid time unit")
-			return
-		}
-		drtn, err := strconv.Atoi(number)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		go Snap(time.Duration(drtn) * duration)
+		fmt.Println("No --snapshot flag, setting fallback interval to 5s")
+		val = "5s"
 	}
+	number := val[:len(val)-1]
+	unit := val[len(val)-1:]
+	duration, exists := DurationMap[unit]
+	if !exists {
+		fmt.Println("Invalid time unit")
+		return
+	}
+	drtn, err := strconv.Atoi(number)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	go Snap(time.Duration(drtn) * duration)
 
 }

@@ -9,6 +9,10 @@
       "price": {
         "type": "float",
         "value": 0.99
+      },
+      "stock": {
+        "type": "float",
+        "value": 10
       }
     }
   },

@@ -3,6 +3,7 @@ package main
 import (
 	"emberdb/internal"
 	"emberdb/storage"
+	"fmt"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,8 +11,12 @@ import (
 
 func main() {
 	app := fiber.New()
-	internal.Parse(os.Args)
 
+	internal.Parse(os.Args)
+	err := storage.LoadFromJSON()
+	if err != nil {
+		fmt.Println("Invalid snapshot")
+	}
 	app.Post("/set", SetKey)
 
 	app.Get("/get/:namespace/:key", GetKey)

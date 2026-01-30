@@ -48,8 +48,6 @@ func InferType(v interface{}) string {
 	}
 }
 
-var mu sync.RWMutex
-
 func (store *Store) Insert(namespace string, key string, value interface{}) (bool, error) {
 	md := Metadata{
 		Type:  Datatype(InferType(value)),

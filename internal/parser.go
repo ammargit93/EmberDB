@@ -2,9 +2,14 @@ package internal
 
 import (
 	"strings"
+	"sync"
 )
 
-func buildMapFromArgs(args *[]string) map[string]string {
+var mu sync.RWMutex
+
+func buildMapFromArgs(args *[]string) {
+	mu.Lock()
+	defer mu.Unlock()
 	if ArgMap == nil {
 		ArgMap = make(map[string]string)
 	}
@@ -16,10 +21,9 @@ func buildMapFromArgs(args *[]string) map[string]string {
 		}
 		ArgMap[flag] = value
 	}
-	return ArgMap
 
 }
 
 func Parse(args []string) {
-	_ = buildMapFromArgs(&args)
+	buildMapFromArgs(&args)
 }
