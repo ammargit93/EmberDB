@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const SnapshotPath string = "/data/snapshot.json"
+const finalPath string = "/data/snapshot.json"
 
 var DurationMap map[string]time.Duration = map[string]time.Duration{
 	"s": time.Second,
@@ -21,7 +21,9 @@ var DurationMap map[string]time.Duration = map[string]time.Duration{
 
 func Snap(duration time.Duration) {
 	for {
-		saveToJSON()
+		if err := saveToJSON(); err != nil {
+			fmt.Println("Snapshot failed:", err)
+		}
 		time.Sleep(duration)
 	}
 }
@@ -44,7 +46,8 @@ func saveToJSON() error {
 		return err
 	}
 
-	fullPath := filepath.Join(root, SnapshotPath)
+	fullPath := filepath.Join(root, finalPath)
+	tmp := fullPath + ".tmp"
 
 	data, err := json.MarshalIndent(internal.DataStore.Namespaces, "", "  ")
 	if err != nil {
@@ -55,7 +58,11 @@ func saveToJSON() error {
 		return err
 	}
 
-	return os.WriteFile(fullPath, data, 0644)
+	err = os.WriteFile(tmp, data, 0644)
+	if err != nil {
+		return err
+	}
+	return os.Rename(tmp, fullPath)
 }
 
 func LoadFromJSON() error {
@@ -67,7 +74,7 @@ func LoadFromJSON() error {
 		return err
 	}
 
-	fullPath := filepath.Join(root, SnapshotPath)
+	fullPath := filepath.Join(root, finalPath)
 
 	filebytes, err := os.ReadFile(fullPath)
 	if err != nil {

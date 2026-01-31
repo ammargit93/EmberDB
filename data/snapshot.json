@@ -2,10 +2,6 @@
   "product": {
     "name": "product",
     "data": {
-      "name": {
-        "type": "string",
-        "value": "body wash"
-      },
       "price": {
         "type": "float",
         "value": 0.99
@@ -13,15 +9,6 @@
       "stock": {
         "type": "float",
         "value": 10
-      }
-    }
-  },
-  "user": {
-    "name": "user",
-    "data": {
-      "name": {
-        "type": "string",
-        "value": "John Doe"
       }
     }
   }

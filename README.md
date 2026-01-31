@@ -12,6 +12,8 @@ EmberDB is a minimal key-value (KV) store implemented in Go. It demonstrates bas
 
 **🗄️ Server in Fiber**: Server is built using the Fiber web framework.
 
+**📄 Write-Ahead Log**: Writes a sequential log with commands executed.
+
 **📁 File Storage Commands**: Files can be stored as byte arrays.
 
 #
@@ -30,7 +32,7 @@ go run .
 
 alternatively
 ```bash
-go run . --snapshot 10s  # saves a snapshot every 10 seconds
+go run . --snapshot 10s  # saves a snapshot every 10 seconds, fallbacks to 5s if flag not provided.
 ```
 
 **Start the client**
@@ -55,8 +57,7 @@ curl -X DELETE http://localhost:9182/delete/users/username
 
 ```
 
-### Upcoming
-- Write-Ahead log 
+### Upcoming 
 - Failure detection and crash recovery
 - Enhanced file handling
 - Better client libraries for multiple languages

@@ -17,6 +17,7 @@ func main() {
 	if err != nil {
 		fmt.Println("Invalid snapshot")
 	}
+
 	app.Post("/set", SetKey)
 
 	app.Get("/get/:namespace/:key", GetKey)

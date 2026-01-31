@@ -28,4 +28,5 @@ func WriteToWAL(content string) {
 	if err != nil {
 		log.Fatalln(err)
 	}
+	file.Sync()
 }

@@ -1,0 +1,2 @@
+[SETVAL]|product|stock|10|float
+[SETVAL]|product|price|0.99|float
