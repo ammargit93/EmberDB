@@ -112,7 +112,9 @@ func Spawn() {
 		fmt.Println(err)
 		return
 	}
-
+	if err := InitialiseWAL(); err != nil {
+		fmt.Println("Failed to initialise WAL: ", err)
+	}
 	go Snap(time.Duration(drtn) * duration)
-
+	go RunWALLoop()
 }

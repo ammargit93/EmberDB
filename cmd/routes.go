@@ -35,6 +35,7 @@ func SetKey(c *fiber.Ctx) error {
 			"error": "invalid request body",
 		})
 	}
+	storage.Channel <- "[SETVAL]|" + data.Namespace + "|" + data.Key + "|" + stringifyValue(data.Value) + "|" + internal.InferType(data.Value) + "\n"
 
 	store := &internal.DataStore
 	ok, err := store.Insert(data.Namespace, data.Key, data.Value)
@@ -48,7 +49,6 @@ func SetKey(c *fiber.Ctx) error {
 			"error": "key already exists",
 		})
 	}
-	go storage.WriteToWAL("[SETVAL]|" + data.Namespace + "|" + data.Key + "|" + stringifyValue(data.Value) + "|" + internal.InferType(data.Value) + "\n")
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"namespace": data.Namespace,
@@ -83,7 +83,7 @@ func UpdateKey(c *fiber.Ctx) error {
 			"error": "invalid request body",
 		})
 	}
-
+	storage.Channel <- "[UPDATEVAL]|" + data.Namespace + "|" + data.Key + "|" + stringifyValue(data.Value) + "|" + internal.InferType(data.Value) + "\n"
 	store := &internal.DataStore
 	md, err := store.Update(data.Namespace, data.Key, data.Value)
 	if err != nil {
@@ -91,7 +91,6 @@ func UpdateKey(c *fiber.Ctx) error {
 			"error": err.Error(),
 		})
 	}
-	go storage.WriteToWAL("[UPDATEVAL]|" + data.Namespace + "|" + data.Key + "|" + stringifyValue(data.Value) + "|" + internal.InferType(data.Value) + "\n")
 
 	return c.JSON(fiber.Map{
 		"message":  "Successfully updated",
@@ -103,6 +102,7 @@ func DeleteKey(c *fiber.Ctx) error {
 	key := c.Params("key")
 	namespace := c.Params("namespace")
 
+	storage.Channel <- "[DELETEVAL]|" + namespace + "|" + key + "\n"
 	store := &internal.DataStore
 	err := store.Delete(namespace, key)
 	if err != nil {
@@ -110,7 +110,6 @@ func DeleteKey(c *fiber.Ctx) error {
 			"error": err.Error(),
 		})
 	}
-	go storage.WriteToWAL("[DELETEVAL]|" + namespace + "|" + key + "\n")
 
 	return c.JSON(fiber.Map{
 		"message":   "Successfully deleted",

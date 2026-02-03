@@ -4,21 +4,26 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 )
 
-func InitialiseWAL() {
-	_, err := os.Create("../data/wal.log")
+var Channel chan string = make(chan string)
+
+func InitialiseWAL() error {
+	f, err := os.OpenFile("../data/wal.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		fmt.Println(err)
+		return err
+	}
+	return f.Close()
+}
+func RunWALLoop() {
+	for {
+		content := <-Channel
+		WriteToWAL(content)
+		fmt.Println("Written to WAL: ", content)
 	}
 }
 
-var fmu sync.RWMutex
-
 func WriteToWAL(content string) {
-	fmu.Lock()
-	defer fmu.Unlock()
 	file, err := os.OpenFile("../data/wal.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
