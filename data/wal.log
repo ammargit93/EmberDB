@@ -1,0 +1,5 @@
+[SETVAL]|users|user:1|map[age:28 email:alice@example.com name:Alice]|file
+[SETVAL]|users|user:2|map[age:35 email:bob@example.com name:Bob]|file
+[SETVAL]|settings|theme|dark|string
+[SETVAL]|counters|page_views|1234|float
+[DELETEVAL]|counters|page_views
