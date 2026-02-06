@@ -1,34 +1,12 @@
 {
-  "counters": {
-    "name": "counters",
-    "data": {}
-  },
-  "settings": {
-    "name": "settings",
-    "data": {
-      "theme": {
-        "type": "string",
-        "value": "dark"
-      }
-    }
-  },
   "users": {
     "name": "users",
     "data": {
-      "user:1": {
-        "type": "file",
+      "name": {
+        "type": 0,
         "value": {
-          "age": 28,
-          "email": "alice@example.com",
-          "name": "Alice"
-        }
-      },
-      "user:2": {
-        "type": "file",
-        "value": {
-          "age": 35,
-          "email": "bob@example.com",
-          "name": "Bob"
+          "Type": 0,
+          "Data": "QW1tYXIgQW5zYXJp"
         }
       }
     }

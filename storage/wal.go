@@ -35,3 +35,13 @@ func WriteToWAL(content string) {
 	}
 	file.Sync()
 }
+
+type Entry struct {
+	Namespace string
+	Key       string
+	Value     interface{}
+}
+
+func ReplayWAL() {
+
+}

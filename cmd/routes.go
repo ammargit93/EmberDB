@@ -3,8 +3,6 @@ package main
 import (
 	"emberdb/internal"
 	"emberdb/storage"
-	"fmt"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -12,20 +10,8 @@ import (
 type Response struct {
 	Namespace string      `json:"namespace"`
 	Key       string      `json:"key"`
+	Type      string      `json:"type"`
 	Value     interface{} `json:"value"`
-}
-
-func stringifyValue(v interface{}) string {
-	switch val := v.(type) {
-	case string:
-		return val
-	case float64:
-		return strconv.FormatFloat(val, 'f', -1, 64)
-	case bool:
-		return strconv.FormatBool(val)
-	default:
-		return fmt.Sprintf("%v", val)
-	}
 }
 
 func SetKey(c *fiber.Ctx) error {
@@ -35,10 +21,21 @@ func SetKey(c *fiber.Ctx) error {
 			"error": "invalid request body",
 		})
 	}
-	storage.Channel <- "[SETVAL]|" + data.Namespace + "|" + data.Key + "|" + stringifyValue(data.Value) + "|" + internal.InferType(data.Value) + "\n"
 
 	store := &internal.DataStore
-	ok, err := store.Insert(data.Namespace, data.Key, data.Value)
+	val, err := internal.ParseValue(data.Type, data.Value)
+
+	storage.Channel <- "[SETVAL]|" +
+		data.Namespace + "|" +
+		data.Key + "|" +
+		internal.StringifyValue(val) + "\n"
+
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	ok, err := store.Insert(data.Namespace, data.Key, val)
+
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -83,9 +80,15 @@ func UpdateKey(c *fiber.Ctx) error {
 			"error": "invalid request body",
 		})
 	}
-	storage.Channel <- "[UPDATEVAL]|" + data.Namespace + "|" + data.Key + "|" + stringifyValue(data.Value) + "|" + internal.InferType(data.Value) + "\n"
+	val, err := internal.ParseValue(data.Type, data.Value)
 	store := &internal.DataStore
-	md, err := store.Update(data.Namespace, data.Key, data.Value)
+	md, err := store.Update(data.Namespace, data.Key, val)
+
+	storage.Channel <- "[UPDATEVAL]|" +
+		data.Namespace + "|" +
+		data.Key + "|" +
+		internal.StringifyValue(val) + "\n"
+
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": err.Error(),

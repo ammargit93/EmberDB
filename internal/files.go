@@ -8,23 +8,20 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// File represents a file stored in a namespace
-type File struct {
+type FileResponse struct {
 	Filename string `json:"filename"`
-	Data     []byte `json:"-"`    // don't expose raw bytes in API
-	Hash     string `json:"hash"` // SHA256 hash
+	Hash     string `json:"hash"`
 	FileSize int    `json:"size"`
 }
 
-// UploadFile handles file uploads and stores them in the EmberDB store
 func UploadFile(c *fiber.Ctx) error {
-	namespace := c.Params("namespace") // must provide namespace as query param
+	namespace := c.Params("namespace")
 	key := c.Params("key")
-	if namespace == "" {
-		return fiber.NewError(fiber.StatusBadRequest, "namespace query parameter is required")
+
+	if namespace == "" || key == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "namespace and key are required")
 	}
 
-	// Parse uploaded file
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "file is required")
@@ -45,49 +42,30 @@ func UploadFile(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "cannot read file")
 	}
 
-	newFile := File{
-		Filename: fileHeader.Filename,
-		Data:     fileBytes,
-		Hash:     generateHash(fileBytes),
-		FileSize: int(fileHeader.Size),
+	// ✅ Convert to internal.Value immediately
+	value := FileValue(fileBytes)
+
+	// ✅ Insert through the DB API (not direct map mutation)
+	ok, err := DataStore.Insert(namespace, key, value)
+	if err != nil {
+		return err
 	}
-
-	// Insert file into EmberDB store as Metadata
-	store := &DataStore // global store
-
-	store.Mu.Lock()
-	defer store.Mu.Unlock()
-
-	// Create namespace if it doesn't exist
-	if store.Namespaces == nil {
-		store.Namespaces = make(map[string]*Namespace)
-	}
-	ns, exists := store.Namespaces[namespace]
-	if !exists {
-		ns = &Namespace{
-			Name: namespace,
-			Data: make(map[string]Metadata),
-		}
-		store.Namespaces[namespace] = ns
-	}
-
-	// Check if key already exists
-	if _, exists := ns.Data[key]; exists {
+	if !ok {
 		return fiber.NewError(fiber.StatusConflict, "key already exists")
 	}
 
-	// Store file as Metadata
-	ns.Data[key] = Metadata{
-		Type:  TypeFile,
-		Value: newFile,
+	// API-only metadata
+	resp := FileResponse{
+		Filename: fileHeader.Filename,
+		Hash:     generateHash(fileBytes),
+		FileSize: int(fileHeader.Size),
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message":   "file uploaded successfully",
 		"namespace": namespace,
 		"key":       key,
-		"hash":      newFile.Hash,
-		"size":      newFile.FileSize,
+		"file":      resp,
 	})
 }
 

@@ -1,19 +1,20 @@
 package internal
 
 import (
+	"strconv"
 	"sync"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-type Datatype string
+type ValueType uint8
 
 const (
-	TypeString Datatype = "string"
-	TypeInt    Datatype = "int"
-	TypeFloat  Datatype = "float"
-	TypeBool   Datatype = "bool"
-	TypeFile   Datatype = "file"
+	ValueString ValueType = iota
+	ValueInt
+	ValueFloat
+	ValueBool
+	ValueFile // []byte
 )
 
 type Store struct {
@@ -27,36 +28,47 @@ type Namespace struct {
 }
 
 type Metadata struct {
-	Type  Datatype    `json:"type"`
-	Value interface{} `json:"value"`
+	Type  ValueType `json:"type"`
+	Value Value     `json:"value"`
 }
 
-func InferType(v interface{}) string {
-	switch v.(type) {
-	case int:
-		return "int"
-	case float64:
-		return "float"
-	case float32:
-		return "float"
-	case string:
-		return "string"
-	case bool:
-		return "bool"
-	default:
-		return "file"
+type Value struct {
+	Type ValueType
+	Data []byte
+}
+
+func StringValue(v string) Value {
+	return Value{Type: ValueString, Data: []byte(v)}
+}
+
+func IntValue(v int64) Value {
+	return Value{Type: ValueInt, Data: strconv.AppendInt(nil, v, 10)}
+}
+
+func FloatValue(v float64) Value {
+	return Value{Type: ValueFloat, Data: strconv.AppendFloat(nil, v, 'g', -1, 64)}
+}
+
+func BoolValue(v bool) Value {
+	if v {
+		return Value{Type: ValueBool, Data: []byte{1}}
 	}
+	return Value{Type: ValueBool, Data: []byte{0}}
 }
 
-func (store *Store) Insert(namespace string, key string, value interface{}) (bool, error) {
+func FileValue(v []byte) Value {
+	return Value{Type: ValueFile, Data: v}
+}
+
+func (store *Store) Insert(namespace, key string, value Value) (bool, error) {
 	md := Metadata{
-		Type:  Datatype(InferType(value)),
+		Type:  value.Type,
 		Value: value,
 	}
+
 	store.Mu.Lock()
 	defer store.Mu.Unlock()
 
-	// create namespace if not exists
 	if store.Namespaces == nil {
 		store.Namespaces = make(map[string]*Namespace)
 	}
@@ -68,14 +80,13 @@ func (store *Store) Insert(namespace string, key string, value interface{}) (boo
 			Data: make(map[string]Metadata),
 		}
 		store.Namespaces[namespace] = nms
-
 	}
-	_, exists = nms.Data[key]
-	if !exists {
-		nms.Data[key] = md
-	} else {
+
+	if _, exists := nms.Data[key]; exists {
 		return false, fiber.NewError(fiber.StatusConflict, "Key exists")
 	}
+
+	nms.Data[key] = md
 	return true, nil
 }
 
@@ -96,9 +107,9 @@ func (store *Store) Get(namespace string, key string) (Metadata, error) {
 	return md, nil
 }
 
-func (store *Store) Update(namespace string, key string, value interface{}) (Metadata, error) {
+func (store *Store) Update(namespace string, key string, value Value) (Metadata, error) {
 	md := Metadata{
-		Type:  Datatype(InferType(value)),
+		Type:  value.Type,
 		Value: value,
 	}
 
