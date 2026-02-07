@@ -21,7 +21,6 @@ func ParseValue(t string, v interface{}) (Value, error) {
 		return StringValue(s), nil
 
 	case "int":
-		// JSON numbers decode as float64
 		f, ok := v.(float64)
 		if !ok {
 			return Value{}, errors.New("value must be number")

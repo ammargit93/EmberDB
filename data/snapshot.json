@@ -1,4 +1,16 @@
 {
+  "product": {
+    "name": "product",
+    "data": {
+      "stock": {
+        "type": 1,
+        "value": {
+          "Type": 1,
+          "Data": "MTA="
+        }
+      }
+    }
+  },
   "users": {
     "name": "users",
     "data": {

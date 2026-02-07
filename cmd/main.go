@@ -15,7 +15,8 @@ func main() {
 	internal.Parse(os.Args)
 	err := storage.LoadFromJSON()
 	if err != nil {
-		fmt.Println("Invalid snapshot")
+		fmt.Println("Invalid snapshot", err)
+		storage.ReplayWAL()
 	}
 
 	app.Post("/set", SetKey)

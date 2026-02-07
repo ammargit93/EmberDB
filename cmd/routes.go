@@ -69,7 +69,7 @@ func GetKey(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"namespace": namespace,
 		"key":       key,
-		"value":     md.Value,
+		"value":     string(md.Value.Data),
 	})
 }
 

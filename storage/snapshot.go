@@ -3,10 +3,12 @@ package storage
 import (
 	"emberdb/internal"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -81,12 +83,22 @@ func LoadFromJSON() error {
 		return err
 	}
 
-	var store internal.Store
-	if err := json.Unmarshal(filebytes, &store.Namespaces); err != nil {
+	// Guard against literal "null"
+	if strings.TrimSpace(string(filebytes)) == "null" {
+		return errors.New("snapshot.json is null (invalid snapshot)")
+	}
+
+	var namespaces map[string]*internal.Namespace
+	if err := json.Unmarshal(filebytes, &namespaces); err != nil {
 		return err
 	}
 
-	internal.DataStore.Namespaces = store.Namespaces
+	// Semantic validation
+	if namespaces == nil {
+		return errors.New("snapshot.json decoded to nil namespaces")
+	}
+
+	internal.DataStore.Namespaces = namespaces
 	return nil
 }
 
