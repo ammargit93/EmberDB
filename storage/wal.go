@@ -14,22 +14,47 @@ import (
 var Channel chan string = make(chan string)
 
 func InitialiseWAL() error {
-	f, err := os.OpenFile("../data/wal.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	r := projectRoot()
+	f, err := os.OpenFile(r+"\\data\\wal.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 	return f.Close()
 }
+
+func WalEntryExists(target string) bool {
+	r := projectRoot()
+	walPath := r + "\\data\\wal.log"
+	content, err := os.ReadFile(walPath)
+	if err != nil {
+		fmt.Print(err)
+	}
+	fmt.Println(target)
+	strContent := strings.Split(string(content), "\n")
+	for i := range strContent {
+		val := strings.Split(strContent[i], ":")[0]
+		if val == strings.Split(target, ":")[0] {
+			return true
+		}
+	}
+	return false
+}
+
 func RunWALLoop() {
 	for {
 		content := <-Channel
-		WriteToWAL(content)
-		fmt.Println("Written to WAL: ", content)
+		if !WalEntryExists(content) {
+			WriteToWAL(content)
+			fmt.Println("Written to WAL: ", content)
+		} else {
+			fmt.Print("Key exists in WAL")
+		}
 	}
 }
 
 func WriteToWAL(content string) {
-	file, err := os.OpenFile("../data/wal.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	r := projectRoot()
+	file, err := os.OpenFile(r+"\\data\\wal.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +75,8 @@ var mapper map[string]string = map[string]string{
 }
 
 func ReplayWAL() error {
-	f, err := os.Open("../data/wal.log")
+	r := projectRoot()
+	f, err := os.Open(r + "\\data\\wal.log")
 	if err != nil {
 		return err
 	}
@@ -58,7 +84,7 @@ func ReplayWAL() error {
 
 	scanner := bufio.NewScanner(f)
 	store := &internal.DataStore
-
+	fmt.Println(r + "\\data\\wal.log")
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {

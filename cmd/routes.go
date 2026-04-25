@@ -24,11 +24,12 @@ func SetKey(c *fiber.Ctx) error {
 
 	store := &internal.DataStore
 	val, err := internal.ParseValue(data.Type, data.Value)
-
-	storage.Channel <- "[SETVAL]|" +
+	entry := "[SETVAL]|" +
 		data.Namespace + "|" +
 		data.Key + "|" +
 		internal.StringifyValue(val) + "\n"
+
+	storage.Channel <- entry
 
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})

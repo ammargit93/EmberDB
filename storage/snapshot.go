@@ -32,21 +32,18 @@ func Snap(duration time.Duration) {
 
 var mu sync.RWMutex
 
-func projectRoot() (string, error) {
+func projectRoot() string {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return "", err
+		return ""
 	}
-	return filepath.Dir(cwd), nil
+	return filepath.Dir(cwd)
 }
 func saveToJSON() error {
 	internal.DataStore.Mu.RLock()
 	defer internal.DataStore.Mu.RUnlock()
 
-	root, err := projectRoot()
-	if err != nil {
-		return err
-	}
+	root := projectRoot()
 
 	fullPath := filepath.Join(root, finalPath)
 	tmp := fullPath + ".tmp"
@@ -71,10 +68,7 @@ func LoadFromJSON() error {
 	internal.DataStore.Mu.Lock()
 	defer internal.DataStore.Mu.Unlock()
 
-	root, err := projectRoot()
-	if err != nil {
-		return err
-	}
+	root := projectRoot()
 
 	fullPath := filepath.Join(root, finalPath)
 
